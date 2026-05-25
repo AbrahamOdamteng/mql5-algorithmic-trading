@@ -13,8 +13,10 @@
 #include <WeekHighLows/cluster_logic.mqh>
 #include <WeekHighLows/week_functions.mqh>
 #include "EA_Utils.mqh"
+#include "TradeLogger.mqh"
 
 CTrade g_trade; 
+
 
 input int     g_ATR_Period              = 14;
 input int     g_MinClusterSize          = 2;
@@ -27,6 +29,7 @@ input double  g_Impulse_ATR_multiplier  = 0.5;
 input double  g_pullback_ATR_multiplier = 0.5;
 
 input int     g_TakeProfitMultiplier    = 2;
+
 
 
 datetime      lastProcessedBarTime      = 0;
@@ -84,10 +87,14 @@ int OnInit()
 
       detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_Impulse_ATR_multiplier,g_pullback_ATR_multiplier, g_ATR_Cluster_multiplier);
       detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier, g_pullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+    
 
     }
 
-   return(INIT_SUCCEEDED);
+    DeleteTradeCsv();
+    bool opendCSVFile = OpenTradeCsv();
+    int returnValue = opendCSVFile ? INIT_SUCCEEDED: INIT_FAILED;
+    return(INIT_SUCCEEDED);
   }
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
@@ -105,8 +112,20 @@ void OnDeinit(const int reason)
          g_pullbackBuffer = NULL;
       }
 
+      CloseTradeCsv();
    
   }
+
+void OnTradeTransaction(
+   const MqlTradeTransaction& trans,
+   const MqlTradeRequest& request,
+   const MqlTradeResult& result
+){
+  OnTradeTransactionHelper(trans,request,result);
+}
+
+
+
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+

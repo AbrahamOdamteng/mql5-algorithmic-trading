@@ -314,6 +314,8 @@ bool detectImpulseContinuationSignalV2(
 
    //!isStartOfNewWeek || 
    if(arraySize == 0 || arraySizeHL == 0){
+      // Print("detectImpulseContinuationSignal => ERROR: arraySize == 0 || arraySizeHL == 0");
+
       return false;
    }
 
@@ -326,6 +328,7 @@ bool detectImpulseContinuationSignalV2(
    int indexOfLastFinishedWeek = lastIndex - 1;
 
    if(indexOfLastFinishedWeek < 0){
+      Print("detectImpulseContinuationSignal => indexOfLastFinishedWeek < 0");
       return false;
    }
 
@@ -352,6 +355,7 @@ bool detectImpulseContinuationSignalV2(
    }
    else
    {
+      // Print("detectImpulseContinuationSignal => Nothing detected");
       return false;
    }
 
@@ -383,7 +387,6 @@ bool detectImpulseContinuationSignalV2(
             Append(priceCluster,whl );
       }
    }
-
 
    PriceCluster detectedCluster = CreatePriceCluster(
       basePriceLevel.lineType,
