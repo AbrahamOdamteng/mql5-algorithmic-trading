@@ -1,0 +1,29 @@
+# Ignore everything
+*
+
+# Allow folder traversal
+!*/
+
+# But track this file
+!.gitignore
+
+# ===== EXPERT ADVISORS =====
+!Experts/WeekHighLow/
+!Experts/WeekHighLow/**
+
+
+# Indicators
+!Indicators/WeekHighLow/
+!Indicators/WeekHighLow/**
+
+
+# Include files
+!Include/WeekHighLows/
+!Include/WeekHighLows/**
+
+# Files
+!Files/WeekHighLow/
+!Files/WeekHighLow/**
+
+# Ignore compiled binaries
+*.ex5
