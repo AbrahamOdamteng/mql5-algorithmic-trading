@@ -3,18 +3,19 @@
 #define TRADE_LOGGER
 
 int g_TradeCsvHandle = INVALID_HANDLE;
+// string g_filename = _Symbol + "_oanda_trades.csv";
+string g_filename =  "all_symbols_oanda_trades.csv";
+
 
 void DeleteTradeCsv()
 {
-   string filename =
-      _Symbol + "_trades.csv";
 
    bool exists =
-      FileIsExist(filename, FILE_COMMON);
+      FileIsExist(g_filename, FILE_COMMON);
 
    Print(
       "TESTING File Exists | ",
-      filename,
+      g_filename,
       " : ",
       exists
    );
@@ -22,22 +23,20 @@ void DeleteTradeCsv()
    if(exists)
    {
       bool deleted =
-         FileDelete(filename, FILE_COMMON);
+         FileDelete(g_filename, FILE_COMMON);
 
       if(deleted)
-         Print("Deleted existing CSV: ", filename);
+         Print("Deleted existing CSV: ", g_filename);
       else
-         Print("Failed to delete CSV: ", filename);
+         Print("Failed to delete CSV: ", g_filename);
    }
 }
 
 bool OpenTradeCsv()
 {
-   string filename =
-      _Symbol + "_trades.csv";
 
    g_TradeCsvHandle = FileOpen(
-      filename,
+      g_filename,
       FILE_WRITE |
       FILE_READ  |
       FILE_CSV   |

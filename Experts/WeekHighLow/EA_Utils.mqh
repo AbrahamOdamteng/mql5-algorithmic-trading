@@ -407,8 +407,119 @@ string tradeComment(datetime tradeTime, string direction, double impulse, double
    return StringFormat("D%dT%d|C%d|I%.4f|P%.4f", dayOfWeek,hourOfDay, ArraySize(cluster.levels), impulse,pullback);
 }
 
+void PrintOrderDistances(
+   double entryPrice,
+   double stopLoss,
+   double takeProfit
+)
+{
+   double minStopDistance =
+      SymbolInfoInteger(
+         _Symbol,
+         SYMBOL_TRADE_STOPS_LEVEL
+      ) *
+      SymbolInfoDouble(
+         _Symbol,
+         SYMBOL_POINT
+      );
+
+   double slDistance =
+      MathAbs(entryPrice - stopLoss);
+
+   double tpDistance =
+      MathAbs(takeProfit - entryPrice);
+
+   Print("====================================");
+   Print("ENTRY PRICE: ", entryPrice);
+   Print("STOP LOSS : ", stopLoss);
+   Print("TAKE PROFIT: ", takeProfit);
+
+   Print("SL DISTANCE: ", slDistance);
+   Print("TP DISTANCE: ", tpDistance);
+
+   Print("MIN STOP DISTANCE: ", minStopDistance);
+
+   Print(
+      "SL VALID: ",
+      slDistance >= minStopDistance
+   );
+
+   Print(
+      "TP VALID: ",
+      tpDistance >= minStopDistance
+   );
+
+   Print("====================================");
+}
+
+double NormalizePrice(double price)
+{
+   double tickSize =
+      SymbolInfoDouble(
+         _Symbol,
+         SYMBOL_TRADE_TICK_SIZE
+      );
+
+   return
+      MathRound(price / tickSize)
+      * tickSize;
+}
+
 
 void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  CTrade &trade, int takeProfitMultiplier, double atrVal){
+
+   Print(
+      "SYMBOL_FILLING_MODE=",
+      SymbolInfoInteger(_Symbol, SYMBOL_FILLING_MODE)
+   );
+
+   Print(
+      "SYMBOL_TRADE_MODE=",
+      SymbolInfoInteger(_Symbol, SYMBOL_TRADE_MODE)
+   );
+
+   Print(
+      "SYMBOL_ORDER_MODE=",
+      SymbolInfoInteger(_Symbol, SYMBOL_ORDER_MODE)
+   );
+
+   Print(
+      "SYMBOL_TRADE_STOPS_LEVEL=",
+      SymbolInfoInteger(
+         _Symbol,
+         SYMBOL_TRADE_STOPS_LEVEL
+      )
+   );
+
+   Print(
+   "Point=",
+   SymbolInfoDouble(_Symbol, SYMBOL_POINT)
+   );
+
+   Print(
+   "SYMBOL_VOLUME_MIN=",
+   SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN)
+   );
+
+   Print(
+      "SYMBOL_VOLUME_MAX=",
+      SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX)
+   );
+
+   Print(
+      "SYMBOL_VOLUME_STEP=",
+      SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP)
+   );
+
+//   trade.SetTypeFilling(ORDER_FILLING_FOK);
+
+
+   double minStopDistance = SymbolInfoInteger(_Symbol,SYMBOL_TRADE_STOPS_LEVEL) * SymbolInfoDouble( _Symbol,SYMBOL_POINT);
+
+
+
+
+
 
    double longEntryPrice = cluster.seedLevel.price + atrVal; 
    double longStopLoss   = cluster.seedLevel.price; 
@@ -418,7 +529,71 @@ void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  C
    double shortStopLoss   = cluster.seedLevel.price; 
    double shortTakeProfit = shortEntryPrice - (takeProfitMultiplier * MathAbs(shortStopLoss - shortEntryPrice ));
 
+   longEntryPrice = NormalizePrice(longEntryPrice);
+   longStopLoss   = NormalizePrice(longStopLoss);
+   longTakeProfit = NormalizePrice(longTakeProfit);
+
+   shortEntryPrice   = NormalizePrice(shortEntryPrice);
+   shortStopLoss     = NormalizePrice(shortStopLoss);
+   shortTakeProfit   = NormalizePrice(shortTakeProfit);
+
+
    double volume          = 0.0;
+
+   double longEntryDistance   = MathAbs(longEntryPrice - longStopLoss);
+   double longTpDistance      = MathAbs(longTakeProfit - longEntryPrice);
+
+
+   double shortEntryDistance =
+   MathAbs(shortEntryPrice - shortStopLoss);
+
+double shortTpDistance =
+   MathAbs(shortTakeProfit - shortEntryPrice);
+
+if(longEntryDistance < minStopDistance)
+{
+   Print(
+      "INVALID LONG SL DISTANCE | ",
+      "Required=", minStopDistance,
+      " Actual=", longEntryDistance
+   );
+
+   return;
+}
+
+if(longTpDistance < minStopDistance)
+{
+   Print(
+      "INVALID LONG TP DISTANCE | ",
+      "Required=", minStopDistance,
+      " Actual=", longTpDistance
+   );
+
+   return;
+}
+
+
+if(shortEntryDistance < minStopDistance)
+{
+   Print(
+      "INVALID SHORT SL DISTANCE | ",
+      "Required=", minStopDistance,
+      " Actual=", shortEntryDistance
+   );
+
+   return;
+}
+
+if(shortTpDistance < minStopDistance)
+{
+   Print(
+      "INVALID SHORT TP DISTANCE | ",
+      "Required=", minStopDistance,
+      " Actual=", shortTpDistance
+   );
+
+   return;
+}
 
    WeekData wd = weeks[cluster.seedLevel.weekNumber];
    if(wd.weekNumber != cluster.seedLevel.weekNumber){
@@ -427,8 +602,10 @@ void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  C
    }
 
    if(cluster.seedLevel.lineType == WEEK_HIGH){
-      volume = Calculate_Lot_Size_V2(100, longEntryPrice, longStopLoss );
+      volume = Calculate_Lot_Size_V2(1000, longEntryPrice, longStopLoss );
       string comment = tradeComment(wd.highTime, "H", wd.highImpulse, wd.highPullback,cluster);
+
+      PrintOrderDistances(longEntryPrice,longStopLoss, longTakeProfit);
 
       bool success = trade.BuyStop(volume, longEntryPrice,_Symbol,longStopLoss,longTakeProfit,ORDER_TIME_GTC,0,comment );
 
@@ -442,9 +619,10 @@ void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  C
       }
    } else {
 
-      volume = Calculate_Lot_Size_V2(100, shortEntryPrice, shortStopLoss );
+      volume = Calculate_Lot_Size_V2(1000, shortEntryPrice, shortStopLoss );
 
       string comment = tradeComment(wd.lowTime, "L", wd.lowImpulse, wd.lowPullback,cluster);
+      PrintOrderDistances(shortEntryPrice, shortStopLoss, shortTakeProfit);
 
       bool success = trade.SellStop(volume, shortEntryPrice,_Symbol,shortStopLoss,shortTakeProfit,ORDER_TIME_GTC,0,comment);
 
