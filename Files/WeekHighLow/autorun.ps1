@@ -1,4 +1,5 @@
 $mt5 = "C:\Program Files\MetaTrader 5\terminal64.exe"
+$iniDir = Join-Path $terminalDataPath "MQL5\Files\WeekHighLow"
 
 $configs = @(
     "EURUSD.ini",
