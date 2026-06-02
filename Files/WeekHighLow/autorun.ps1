@@ -1,56 +1,56 @@
 $mt5 = "C:\Program Files\MetaTrader 5\terminal64.exe"
 
 $configs = @(
-    "EURUSD.ini",
-    "GBPUSD.ini",
-    "USDJPY.ini",
-    "USDCHF.ini",
-    "USDCAD.ini",
-    "AUDUSD.ini",
-    "NZDUSD.ini",
+    "EURUSD.ini"
+    # "GBPUSD.ini",
+    # "USDJPY.ini",
+    # "USDCHF.ini",
+    # "USDCAD.ini",
+    # "AUDUSD.ini",
+    # "NZDUSD.ini",
 
-    "EURJPY.ini",
-    "GBPJPY.ini",
-    "AUDJPY.ini",
-    "CADJPY.ini",
-    "CHFJPY.ini",
-    "NZDJPY.ini",
+    # "EURJPY.ini"
+    # "GBPJPY.ini",
+    # "AUDJPY.ini"
+    # "CADJPY.ini",
+    # "CHFJPY.ini",
+    # "NZDJPY.ini",
 
-    "EURGBP.ini",
-    "EURAUD.ini",
-    "EURNZD.ini",
-    "EURCAD.ini",
-    "EURCHF.ini",
+    # "EURGBP.ini"
+    # "EURAUD.ini",
+    # "EURNZD.ini",
+    # "EURCAD.ini",
+    # "EURCHF.ini",
 
-    "GBPAUD.ini",
-    "GBPNZD.ini",
-    "GBPCAD.ini",
-    "GBPCHF.ini",
+    # "GBPAUD.ini",
+    # "GBPNZD.ini",
+    # "GBPCAD.ini",
+    # "GBPCHF.ini",
 
-    "AUDNZD.ini",
-    "AUDCAD.ini",
-    "AUDCHF.ini",
+    # "AUDNZD.ini",
+    # "AUDCAD.ini",
+    # "AUDCHF.ini",
 
-    "NZDCAD.ini",
-    "NZDCHF.ini",
+    # "NZDCAD.ini",
+    # "NZDCHF.ini",
 
-    "CADCHF.ini",
+    # "CADCHF.ini"
 
-    "XAUUSD.ini",
-    "XAGUSD.ini",
-    "XPTUSD.ini",
-    "XPDUSD.ini",
+    # "XAUUSD.ini",
+    # "XAGUSD.ini"
+    # "XPTUSD.ini",
+    # "XPDUSD.ini",
 
-    "US500.ini",
-    "US30.ini",
-    "US100.ini",
-    "US2000.ini"
-    "UK100.ini",
-    "WHEAT.ini",
-    "SOYBN.ini",
-    "AU200.ini",
-    "EU50.ini",
-    "HK50.ini"
+    # "US500.ini",
+    # "US30.ini"
+    # "US100.ini",
+    # "US2000.ini"
+    # "UK100.ini",
+    # "WHEAT.ini",
+    # "SOYBN.ini",
+    # "AU200.ini",
+    # "EU50.ini"
+    # "HK50.ini"
 
 )
 

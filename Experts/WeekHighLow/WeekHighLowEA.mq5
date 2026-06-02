@@ -91,7 +91,7 @@ int OnInit()
 
     }
 
-    // DeleteTradeCsv();
+    DeleteTradeCsv();
     bool opendCSVFile = OpenTradeCsv();
     int returnValue = opendCSVFile ? INIT_SUCCEEDED: INIT_FAILED;
     return(INIT_SUCCEEDED);

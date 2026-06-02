@@ -46,7 +46,6 @@ bool isNewWeek(datetime currentTime, datetime prevTime)
 {
    if (currentTime < prevTime)
    {
-      // Print("isNewWeek Time Order Error: ", " currentTime=", TimeToString(currentTime), " previousTime= ", TimeToString(prevTime));
       return false;
    }
 
@@ -57,11 +56,41 @@ bool isNewWeek(datetime currentTime, datetime prevTime)
 
    if (current.day_of_week < previous.day_of_week)
    {
-      // Print("New week detected ", " currentTime=", TimeToString(currentTime), " previousTime= ", TimeToString(prevTime) ,  " current.day_of_week= " , IntegerToString(current.day_of_week), " previous.day_of_week = ", IntegerToString(previous.day_of_week) );
       return true;
    }
 
    return false;
+}
+
+
+datetime GetPeriodStart(datetime time, ENUM_TIMEFRAMES tf)
+{
+   int shift = iBarShift(_Symbol, tf, time, false);
+
+   if(shift < 0)
+      return 0;
+
+   return iTime(_Symbol, tf, shift);
+}
+
+
+
+bool IsNewPeriod(
+   datetime currentTime,
+   datetime prevTime,
+   ENUM_TIMEFRAMES tf
+)
+{
+   datetime currentPeriod =
+      GetPeriodStart(currentTime, tf);
+
+   datetime previousPeriod =
+      GetPeriodStart(prevTime, tf);
+
+   if(currentPeriod == 0 || previousPeriod == 0)
+      return false;
+
+   return currentPeriod != previousPeriod;
 }
 
 
@@ -137,7 +166,8 @@ void calculateWeeklyATR(WeekData &weeks[], int period, MqlRates &currentBar)
 
 void detectWeeks( MqlRates &currentBar, MqlRates &previouseBar,WeekData &weeks[], int atrPeriod, RatesCircularBuffer &impulseBuffer){
 
-   bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time,PERIOD_D1);
    if (isStartOfNewWeek){
       DrawCurrentBarLine(currentBar.time);
       calculateWeeklyATR(weeks, atrPeriod, currentBar);
@@ -154,7 +184,8 @@ void detectWeeks( MqlRates &currentBar, MqlRates &previouseBar,WeekData &weeks[]
 
 
 void detectWeekHighLows(  MqlRates &currentBar, MqlRates &previouseBar , WeekData &weeks[], WeekHighLow &weekHighs[], WeekHighLow &weekLows[]){
-   bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time,PERIOD_D1);
    int weekSize          = ArraySize(weeks);
    int weekHighSize      = ArraySize(weekHighs);
    int weekLowSize       = ArraySize(weekLows);

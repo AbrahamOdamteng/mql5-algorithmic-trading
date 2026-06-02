@@ -60,7 +60,8 @@ bool detectCluster(MqlRates &currentBar, MqlRates &previouseBar, WeekData  &myWe
 
    int arraySize         = ArraySize(myWeekData);
    int arraySizeHL       = ArraySize(myWeekHighLow);
-   bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time,PERIOD_D1);
    if(!isStartOfNewWeek || arraySize == 0 || arraySizeHL == 0){
       return false;
    }
@@ -119,7 +120,8 @@ bool detectImpulseSignal(
 ){
    int arraySize         = ArraySize(myWeekData);
    int arraySizeHL       = ArraySize(myWeekHighLow);
-   bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time,PERIOD_D1);
 
    if(!isStartOfNewWeek || arraySize == 0 || arraySizeHL == 0){
       return false;
@@ -186,7 +188,8 @@ bool detectImpulseContinuationSignalV1(
 ){
    int arraySize         = ArraySize(myWeekData);
    int arraySizeHL       = ArraySize(myWeekHighLow);
-   bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time,PERIOD_D1);
 
    //!isStartOfNewWeek || 
    if(arraySize == 0 || arraySizeHL == 0){
@@ -309,7 +312,8 @@ bool detectImpulseContinuationSignalV2(
 ){
    int arraySize         = ArraySize(myWeekData);
    int arraySizeHL       = ArraySize(myWeekHighLow);
-   bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time,PERIOD_D1);
 
 
    //!isStartOfNewWeek || 
