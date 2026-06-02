@@ -51,7 +51,7 @@ int OnInit()
   {
 
     g_ImpulseBuffer = new RatesCircularBuffer(g_impulse_lookback_hours);
-    g_pullbackBuffer = new RatesCircularBuffer(g_impulse_lookback_hours);
+    g_pullbackBuffer = new RatesCircularBuffer(g_pullback_lookforward_hours);
 
     MqlRates rates[];
     int requestedBars = 70000;
@@ -94,7 +94,7 @@ int OnInit()
     DeleteTradeCsv();
     bool opendCSVFile = OpenTradeCsv();
     int returnValue = opendCSVFile ? INIT_SUCCEEDED: INIT_FAILED;
-    return(INIT_SUCCEEDED);
+    return(returnValue);
   }
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
