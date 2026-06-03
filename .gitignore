@@ -25,5 +25,9 @@
 !Files/WeekHighLow/
 !Files/WeekHighLow/**
 
+# Documentation
+!docs/
+!docs/**
+
 # Ignore compiled binaries
 *.ex5
