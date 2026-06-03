@@ -66,7 +66,7 @@ int OnInit()
     // Make array behave like indicator arrays
     ArraySetAsSeries(rates, true);
 
-    for(int i = loadedBars-2; i >= 0; i--){
+    for(int i = loadedBars-2; i >= 1; i--){
       MqlRates currentBar  = rates[i];
       MqlRates previousBar = rates[i + 1];
 
@@ -91,10 +91,11 @@ int OnInit()
 
     }
 
-    DeleteTradeCsv();
-    bool opendCSVFile = OpenTradeCsv();
-    int returnValue = opendCSVFile ? INIT_SUCCEEDED: INIT_FAILED;
-    return(returnValue);
+    lastProcessedBarTime = iTime(_Symbol,_Period,0);
+
+    // DeleteTradeCsv();
+    // OpenTradeCsv();
+    return(INIT_SUCCEEDED);
   }
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
@@ -112,17 +113,17 @@ void OnDeinit(const int reason)
          g_pullbackBuffer = NULL;
       }
 
-      CloseTradeCsv();
+      // CloseTradeCsv();
    
   }
 
-void OnTradeTransaction(
-   const MqlTradeTransaction& trans,
-   const MqlTradeRequest& request,
-   const MqlTradeResult& result
-){
-  OnTradeTransactionHelper(trans,request,result);
-}
+// void OnTradeTransaction(
+//    const MqlTradeTransaction& trans,
+//    const MqlTradeRequest& request,
+//    const MqlTradeResult& result
+// ){
+//   OnTradeTransactionHelper(trans,request,result);
+// }
 
 
 
@@ -139,16 +140,16 @@ void OnTick()
     lastProcessedBarTime = currentBarTime;
 
     MqlRates rates[];
-    int loadedBars = CopyRates(_Symbol,_Period, 0,2,rates);
-    if(loadedBars < 2){
-      Print("Failed to load latest bars");
-      return;
+    int loadedBars = CopyRates(_Symbol,_Period, 0,3,rates);
+    if(loadedBars < 3){
+       Print("Failed to load latest bars");
+       return;
     }
 
     ArraySetAsSeries(rates,true);
 
-    MqlRates currentBar  = rates[0];
-    MqlRates previousBar = rates[1];
+    MqlRates currentBar  = rates[1];
+    MqlRates previousBar = rates[2];
 
     
     g_ImpulseBuffer.Push(currentBar);
