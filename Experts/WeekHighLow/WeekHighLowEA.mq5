@@ -26,7 +26,7 @@ input int     g_impulse_lookback_hours      = 24;
 input int     g_pullback_lookforward_hours  = 24;
 
 input double  g_Impulse_ATR_multiplier  = 0.5;
-input double  g_pullback_ATR_multiplier = 0.5;
+input double  g_MinPullback_ATR_multiplier = 0.5;
 
 input int     g_TakeProfitMultiplier    = 2;
 input double  g_Risk_Percentage         = 1.0;
@@ -86,8 +86,8 @@ int OnInit()
       // detectImpulseSignal(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier);
 
 
-      detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_Impulse_ATR_multiplier,g_pullback_ATR_multiplier, g_ATR_Cluster_multiplier);
-      detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier, g_pullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+      detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_Impulse_ATR_multiplier,g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+      detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier, g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
     
 
     }
@@ -167,8 +167,8 @@ void OnTick()
     // bool lowClusterDetected =  detectImpulseSignal(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier);
 
 
-    bool highClusterDetected = detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_Impulse_ATR_multiplier,g_pullback_ATR_multiplier, g_ATR_Cluster_multiplier);
-    bool lowClusterDetected  = detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier, g_pullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+    bool highClusterDetected = detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_Impulse_ATR_multiplier,g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+    bool lowClusterDetected  = detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier, g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
 
 
     if(highClusterDetected){

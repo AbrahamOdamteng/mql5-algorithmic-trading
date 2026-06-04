@@ -15,9 +15,9 @@ These are the decisions that should be clarified before larger refactors or stra
 
 ## Pullback Rule
 
-1. Is pullback meant to be a maximum allowed pullback?
-2. If yes, V2 should likely use `actualPullback <= allowedPullback`.
-3. If no, rename the multiplier and comments so it is clear that a minimum pullback is required.
+1. The active V2 strategy treats pullback as a minimum required pullback: `actualPullback >= requiredPullback`.
+2. V1 used a maximum-pullback interpretation: `actualPullback <= maxPullback`.
+3. If V1 is revived, keep its maximum-pullback names separate from V2's minimum-pullback names.
 
 ## Lookback Units
 

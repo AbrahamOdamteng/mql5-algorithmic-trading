@@ -1,15 +1,16 @@
 $mt5 = "C:\Program Files\MetaTrader 5\terminal64.exe"
+$maxRuntimeHours = 6
 
 $configs = @(
-    "EURUSD.ini",
-    "GBPUSD.ini",
-    "USDJPY.ini",
-    "XAUUSD.ini",
-    "XAGUSD.ini",
-    "US30.ini",
-    "US500.ini",
-    "US100.ini",
-    "UK100.ini",
+    # "EURUSD.ini",
+    # "GBPUSD.ini",
+    # "USDJPY.ini",
+    # "XAUUSD.ini",
+    # "XAGUSD.ini",
+    # "US30.ini",
+    # "US500.ini",
+    # "US100.ini", # Excluded: broker history starts 2014.09.15; MT5 can hang indefinitely for 2000-based tests.
+    "UK100.ini"
     # "GBPUSD.ini",
     # "USDJPY.ini",
     # "USDCHF.ini",
@@ -72,9 +73,9 @@ foreach ($config in $configs) {
     Write-Host "====================================="
 
 
-    # Remove-Item `
-    #   "C:\Users\abraham\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\Tester\cache\*" `
-    #   -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item `
+      "C:\Users\abraham\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\Tester\cache\*" `
+      -Recurse -Force -ErrorAction SilentlyContinue
 
     Start-Sleep -Seconds 5
 
@@ -88,7 +89,17 @@ foreach ($config in $configs) {
         -ArgumentList "/config:`"$configPath`"" `
         -PassThru
 
-    $process.WaitForExit()
+    while (-not $process.HasExited) {
+        Start-Sleep -Seconds 30
+        $process.Refresh()
+
+        $elapsed = (Get-Date) - $startTime
+        if ($elapsed.TotalHours -ge $maxRuntimeHours) {
+            Write-Host "Timeout reached for $config after $($elapsed.ToString()). Stopping MT5 process."
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            break
+        }
+    }
 
     $endTime = Get-Date
     $duration = $endTime - $startTime

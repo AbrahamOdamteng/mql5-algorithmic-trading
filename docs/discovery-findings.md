@@ -25,7 +25,7 @@ The indicator uses `detectImpulseSignal()`.
 
 This means chart drawings/signals may not represent what the EA actually trades.
 
-### Pullback Direction May Be Wrong In V2
+### V2 Pullback Rule Requires Minimum Pullback
 
 `detectImpulseContinuationSignalV2()` delegates validation to `helper()`.
 
@@ -33,17 +33,17 @@ This means chart drawings/signals may not represent what the EA actually trades.
 
 ```text
 actualImpulse >= requiredImpulse
-actualPullback >= allowedPullback
+actualPullback >= requiredPullback
 ```
 
 V1 used:
 
 ```text
 actualImpulse >= requiredImpulse
-actualPullback <= allowedPullback
+actualPullback <= maxPullback
 ```
 
-If `g_pullback_ATR_multiplier` represents a maximum allowed pullback, V2 is likely inverted.
+This is intentional for the active V2 strategy: the pullback ATR multiplier is a minimum required pullback threshold, not a maximum allowed pullback.
 
 ### Active Order Risk Is Percentage Based
 
@@ -84,7 +84,7 @@ On H1 this happens to match hours. On M15, 48 means 12 hours, not 48 hours.
 
 `WeekData.weeklyATR` is initialized to `-1`.
 
-If signal code runs before ATR is calculated, required impulse, allowed pullback, and cluster size can become negative.
+If signal code runs before ATR is calculated, required impulse, required pullback, and cluster size can become negative.
 
 This can make validation pass unexpectedly once pullback fields are available.
 

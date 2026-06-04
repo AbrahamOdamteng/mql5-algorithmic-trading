@@ -110,3 +110,23 @@ Each entry should include:
 - Best OOS low-trade result: pass `251`, profit `21,004.39`, DD `15.63%`, ratio `1.34`, trades `73`, profit factor `1.37`, Sharpe `8.98`.
 - Other positive OOS rows: pass `68`, profit `9,179.68`, DD `15.23%`, ratio `0.60`, trades `119`; pass `20`, profit `670.67`, DD `7.32%`, ratio `0.09`, trades `9`.
 - Decision or next step: Relaxing single-symbol trade-count filtering did not reveal a strong EURUSD OOS candidate. Pass `251` is the only low-trade candidate worth noting, but it remains below the OOS ratio threshold and needs cross-symbol validation before it can be considered useful.
+
+### 2026-06-04 - W1 High-Impulse Expanded Basket Genetic Optimization
+
+- Goal: Test whether W1 high/low high-impulse genetic optimization produces useful manifolds across a diverse starter basket before attempting full multi-symbol deployment.
+- Intended basket: `EURUSD`, `GBPUSD`, `USDJPY`, `XAUUSD`, `XAGUSD`, `US30`, `US500`, `US100`, and `UK100`.
+- Completed symbols: `EURUSD`, `GBPUSD`, `USDJPY`, `XAUUSD`, `US30`, and `US500`.
+- Skipped or abandoned symbols: `US100`, `XAGUSD`, and `UK100`.
+- Skip reason: `US100` broker history starts at `2014.09.15`, which can cause MT5 to hang indefinitely for `2000`-based tests. `XAGUSD` and `UK100` also showed practical MT5 optimizer hang behavior and were abandoned for this batch.
+- Change or experiment: Created shared preset `Profiles/Tester/ImpulseContinuation_W1HighLow_Genetic_HighImpulse.set` and configured symbol-specific genetic optimizer `.ini` files.
+- Test setup: W1 high/low logic, `H1` tester timeframe, `2000 -> 2018` total test window, MT5 optimizer forward validation enabled, `g_Risk_Percentage = 1.0` fixed.
+- Review criteria: profit `> 0` in both in-sample and validation, profit/DD ratio `> 2.0` in both, DD `<= 30%` in both, in-sample trades `>= 200`, validation trades `>= 100`.
+- Outcome by symbol: `EURUSD` had `4` accepted candidates, `GBPUSD` had `2`, `USDJPY` had `9`, `XAUUSD` had many accepted candidates, while `US30` and `US500` had `0` accepted candidates.
+- Detailed counts: `EURUSD` had `553` paired rows, `255` positive-profit pairs, `14` ratio-qualified pairs, `12` after DD cap, and `4` accepted. `GBPUSD` had `557` paired rows, `178` positive-profit pairs, `6` ratio-qualified pairs, `6` after DD cap, and `2` accepted. `USDJPY` had `556` paired rows, `265` positive-profit pairs, `20` ratio-qualified pairs, `17` after DD cap, and `9` accepted. `XAUUSD` had `499` paired rows, `410` positive-profit pairs, `209` ratio-qualified pairs, `173` after DD cap, and a large number of accepted candidates. `US30` had `524` paired rows and `0` ratio-qualified pairs. `US500` had `477` paired rows and `0` ratio-qualified pairs.
+- Best EURUSD accepted candidate reviewed: pass `758`, IS profit `54,169.72`, IS DD `10.12%`, IS ratio `5.35`, IS trades `216`; validation profit `39,821.47`, validation DD `12.75%`, validation ratio `3.12`, validation trades `127`; parameters `0.40, 96, 6, 1.6, 0.8, 3`.
+- Best GBPUSD accepted candidate reviewed: pass `285`, IS profit `56,409.35`, IS DD `19.19%`, IS ratio `2.94`, IS trades `332`; validation profit `39,418.61`, validation DD `13.97%`, validation ratio `2.82`, validation trades `140`; parameters `0.25, 144, 18, 1.6, 1.0, 5`.
+- Best USDJPY accepted candidate reviewed: pass `426`, IS profit `118,530.38`, IS DD `20.75%`, IS ratio `5.71`, IS trades `470`; validation profit `104,197.50`, validation DD `18.40%`, validation ratio `5.66`, validation trades `220`; parameters `0.50, 120, 12, 1.3, 0.9, 4`.
+- Best XAUUSD accepted candidate reviewed: pass `234`, IS profit `152,442.13`, IS DD `14.34%`, IS ratio `10.63`, IS trades `353`; validation profit `122,257.06`, validation DD `12.43%`, validation ratio `9.83`, validation trades `328`; parameters `0.40, 168, 24, 1.8, 0.7, 4`.
+- Cross-symbol finding: No exact same parameter set appeared as an accepted candidate across multiple completed symbols.
+- Common region observed among accepted candidates: `g_ATR_Cluster_multiplier` mostly `0.35 -> 0.50`, `g_impulse_lookback_hours` mostly `96 -> 168`, `g_pullback_lookforward_hours` mostly `12 -> 24`, `g_Impulse_ATR_multiplier` mostly `1.3 -> 1.7`, `g_pullback_ATR_multiplier` mostly `0.6 -> 1.0`, and `g_TakeProfitMultiplier` mostly `3` or `5`.
+- Decision or next step: W1 high/low works best so far on `XAUUSD` and `USDJPY`, with usable results on `EURUSD` and `GBPUSD`. Indices did not produce accepted candidates in this batch. Next useful step is to search for a narrowed shared parameter region across `EURUSD`, `GBPUSD`, `USDJPY`, and `XAUUSD`, then run fixed OOS tests.

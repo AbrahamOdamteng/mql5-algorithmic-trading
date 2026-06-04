@@ -69,14 +69,14 @@ For a low pullback:
 It:
 
 - Gets the matching `WeekData` and `WeekHighLow` entry.
-- Computes required impulse, allowed pullback, and cluster size from ATR multipliers.
+- Computes required impulse, required minimum pullback, and cluster size from ATR multipliers.
 - Uses `helper()` to validate impulse/pullback conditions.
 - Builds a `PriceCluster` from the seed level and older qualifying levels.
 - Draws a signal arrow.
 - Appends the cluster to the relevant cluster array.
 - Returns `true` to the EA.
 
-Important note: V2 currently validates pullback with `actualPullback >= allowedPullback`, while V1 used `actualPullback <= allowedPullback`.
+Important note: V2 requires a minimum pullback with `actualPullback >= requiredPullback`, while V1 used a maximum pullback rule with `actualPullback <= maxPullback`.
 
 ## Active Order Logic
 

@@ -183,7 +183,7 @@ bool detectImpulseContinuationSignalV1(
    WeekHighLow &myWeekHighLow[],
    PriceCluster &priceClusterArray[],
    double impulseATRMultiplier,
-   double pullbackATRMultiplier,
+   double maxPullbackATRMultiplier,
    double atrClustermultiplier
 ){
    int arraySize         = ArraySize(myWeekData);
@@ -212,7 +212,7 @@ bool detectImpulseContinuationSignalV1(
    WeekHighLow basePriceLevel = myWeekHighLow[indexOfLastFinishedWeek];
 
    double requiredImpulse  = lastWeek.weeklyATR * impulseATRMultiplier;
-   double allowedPullback  = lastWeek.weeklyATR * pullbackATRMultiplier;
+   double maxPullback      = lastWeek.weeklyATR * maxPullbackATRMultiplier;
 
    double actualImpulse    = 0.0;
    double actualPullback   = 0.0;
@@ -236,7 +236,7 @@ bool detectImpulseContinuationSignalV1(
 
    bool validSignal =
       actualImpulse >= requiredImpulse &&
-      actualPullback <= allowedPullback;
+      actualPullback <= maxPullback;
 
    if(validSignal)
    {
@@ -267,11 +267,11 @@ bool helper(
    WeekData &myWeekData,
    WeekHighLow &myWeekHighLow,
    double impulseATRMultiplier,
-   double pullbackATRMultiplier
+   double minPullbackATRMultiplier
 ){
    
    double requiredImpulse  = myWeekData.weeklyATR * impulseATRMultiplier;
-   double allowedPullback  = myWeekData.weeklyATR * pullbackATRMultiplier;
+   double requiredPullback = myWeekData.weeklyATR * minPullbackATRMultiplier;
 
    double actualImpulse    = 0.0;
    double actualPullback   = 0.0;
@@ -293,7 +293,7 @@ bool helper(
 
    bool validSignal =
       actualImpulse  >= requiredImpulse &&
-      actualPullback >= allowedPullback;
+      actualPullback >= requiredPullback;
 
       return validSignal;
 }
@@ -307,7 +307,7 @@ bool detectImpulseContinuationSignalV2(
    WeekHighLow &myWeekHighLow[],
    PriceCluster &priceClusterArray[],
    double impulseATRMultiplier,
-   double pullbackATRMultiplier,
+   double minPullbackATRMultiplier,
    double atrClusterMultiplier
 ){
    int arraySize         = ArraySize(myWeekData);
@@ -339,23 +339,19 @@ bool detectImpulseContinuationSignalV2(
    WeekData lastWeek          = myWeekData[indexOfLastFinishedWeek];
    WeekHighLow basePriceLevel = myWeekHighLow[indexOfLastFinishedWeek];
 
-   double requiredImpulse  = lastWeek.weeklyATR * impulseATRMultiplier;
-   double allowedPullback  = lastWeek.weeklyATR * pullbackATRMultiplier;
    double clusterSize      = lastWeek.weeklyATR * atrClusterMultiplier;
 
-   double actualImpulse    = 0.0;
-   double actualPullback   = 0.0;
    bool validSignal = false;
 
    if(basePriceLevel.lineType == WEEK_HIGH  && 
       (isStartOfNewWeek || lastWeek.highPullbackCalculatedTime == currentBar.time))
    {
-      validSignal = helper(lastWeek,basePriceLevel,impulseATRMultiplier,pullbackATRMultiplier);
+      validSignal = helper(lastWeek,basePriceLevel,impulseATRMultiplier,minPullbackATRMultiplier);
    }
    else if(basePriceLevel.lineType == WEEK_LOW && lastWeek.lowPullback > -1 &&
       (isStartOfNewWeek  || lastWeek.lowPullbackCalculatedTime == currentBar.time))
    {
-      validSignal = helper(lastWeek,basePriceLevel,impulseATRMultiplier,pullbackATRMultiplier);
+      validSignal = helper(lastWeek,basePriceLevel,impulseATRMultiplier,minPullbackATRMultiplier);
    }
    else
    {
@@ -385,7 +381,7 @@ bool detectImpulseContinuationSignalV2(
       }
 
       bool isWithinRange = IsWithinClusterRange(basePriceLevel, whl, clusterSize);
-      bool valid = helper(wd,whl,impulseATRMultiplier,pullbackATRMultiplier);
+      bool valid = helper(wd,whl,impulseATRMultiplier,minPullbackATRMultiplier);
 
       if(valid && isWithinRange){
             Append(priceCluster,whl );

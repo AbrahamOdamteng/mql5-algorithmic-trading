@@ -88,7 +88,7 @@ bool OpenTradeCsv()
          "pullback_lookforward_hours",
 
          "impulse_atr_multiplier",
-         "pullback_atr_multiplier"
+         "min_pullback_atr_multiplier"
       );
 
       FileFlush(g_TradeCsvHandle);
@@ -193,7 +193,7 @@ void SaveClosedTradeToCsv(
       g_pullback_lookforward_hours,
 
       g_Impulse_ATR_multiplier,
-      g_pullback_ATR_multiplier
+      g_MinPullback_ATR_multiplier
    );
 
    FileFlush(g_TradeCsvHandle);
@@ -316,7 +316,7 @@ void OnTradeTransactionHelper(
       g_pullback_lookforward_hours,
 
       g_Impulse_ATR_multiplier,
-      g_pullback_ATR_multiplier
+      g_MinPullback_ATR_multiplier
    );
 
    FileFlush(g_TradeCsvHandle);
