@@ -96,7 +96,7 @@ For a low signal:
 - Take profit is based on entry-to-stop distance times `g_TakeProfitMultiplier`.
 - A `SellStop` order is placed.
 
-The active lot sizing call uses a fixed risk amount of `1000` via `Calculate_Lot_Size_V2()`.
+The active lot sizing call uses `g_Risk_Percentage` via `Calculate_Lot_Size_V3()`.
 
 ## Indicator Flow Difference
 

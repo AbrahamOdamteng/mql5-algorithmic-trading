@@ -16,6 +16,20 @@ The project appears to track previous period highs and lows, measure impulse and
 
 The current code creates levels on weekly boundaries using `PERIOD_W1`.
 
+## Current Goal
+
+The practical goal is to develop an EA configuration that can help pass an FTMO-style challenge.
+
+The intended deployment is multi-symbol: a single parameter manifold should eventually be tested across multiple symbols and symbol types, including FX, metals, and indices. If the same manifold performs acceptably across a diverse subset of markets, that is treated as stronger evidence of robustness than a single-symbol result.
+
+The workflow is still sequential:
+
+- First, make the manifold work on one symbol.
+- Then, apply the same manifold to other symbols.
+- Finally, evaluate aggregate portfolio behavior across the symbol set.
+
+Low trade count on one symbol should not automatically reject a manifold if the manifold is intended for multi-symbol deployment. Instead, mark it as needing cross-symbol validation. A low-trade single-symbol result is still weak evidence by itself.
+
 ## Test Plan
 
 - `2000 -> 2012`: In-sample period, tested by the MT5 optimizer.
@@ -28,6 +42,13 @@ Backtest acceptance criteria:
 - Validation profit must be greater than `0`.
 - Out-of-sample profit must be greater than `0`.
 - Equity drawdown must be less than `20%` in every test period.
+
+Current ratio-based review criteria:
+
+- Profit must be greater than `0` in every period.
+- Profit-to-drawdown ratio should be greater than `2.0` in every period.
+- Raw equity drawdown should remain capped, currently using `30%` as a diagnostic cap.
+- Trade count should be evaluated in context. For a single-symbol test, low trade count weakens confidence. For the intended multi-symbol deployment, aggregate trade count across symbols is more important than per-symbol trade count alone.
 
 ## Documentation Files
 

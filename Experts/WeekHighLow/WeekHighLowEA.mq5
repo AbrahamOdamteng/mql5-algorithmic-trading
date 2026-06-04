@@ -29,6 +29,7 @@ input double  g_Impulse_ATR_multiplier  = 0.5;
 input double  g_pullback_ATR_multiplier = 0.5;
 
 input int     g_TakeProfitMultiplier    = 2;
+input double  g_Risk_Percentage         = 1.0;
 
 
 
@@ -175,7 +176,7 @@ void OnTick()
       PriceCluster last = GetLast(g_clusterHighs);
       WeekData lastWeek = GetSecondToLast(g_weekData);
       double clusterHeight = lastWeek.weeklyATR * g_ATR_Cluster_multiplier;
-      PlacePendingOrder(last, g_weekData,g_trade, g_TakeProfitMultiplier, clusterHeight);
+      PlacePendingOrder(last, g_weekData,g_trade, g_TakeProfitMultiplier, clusterHeight, g_Risk_Percentage);
     }
 
     if(lowClusterDetected){
@@ -183,7 +184,7 @@ void OnTick()
       PriceCluster last = GetLast(g_clusterLows);
       WeekData lastWeek = GetSecondToLast(g_weekData);
       double clusterHeight = lastWeek.weeklyATR * g_ATR_Cluster_multiplier;
-      PlacePendingOrder(last,g_weekData, g_trade, g_TakeProfitMultiplier,clusterHeight);
+      PlacePendingOrder(last,g_weekData, g_trade, g_TakeProfitMultiplier,clusterHeight, g_Risk_Percentage);
     }
    
   }

@@ -15,7 +15,7 @@ This affects:
 - `detectImpulseContinuationSignalV1()`
 - `detectImpulseContinuationSignalV2()`
 
-This resolves the earlier discovery finding where the code was using `PERIOD_D1` despite weekly naming.
+This matches the weekly terminology used by the main data structures and helper names.
 
 ### EA And Indicator Do Not Show The Same Strategy
 
@@ -45,15 +45,15 @@ actualPullback <= allowedPullback
 
 If `g_pullback_ATR_multiplier` represents a maximum allowed pullback, V2 is likely inverted.
 
-### Active Order Risk Is Hardcoded
+### Active Order Risk Is Percentage Based
 
-The active order path uses:
+The active order path now uses:
 
 ```text
-Calculate_Lot_Size_V2(1000, entryPrice, stopLoss)
+Calculate_Lot_Size_V3(g_Risk_Percentage, entryPrice, stopLoss)
 ```
 
-This means risk is a fixed amount of 1000 account currency units, not an EA input.
+This means risk is based on current account equity rather than a fixed account-currency amount.
 
 ### No Duplicate Order Or Position Guard
 

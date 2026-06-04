@@ -1,7 +1,15 @@
 $mt5 = "C:\Program Files\MetaTrader 5\terminal64.exe"
 
 $configs = @(
-    "EURUSD.ini"
+    "EURUSD.ini",
+    "GBPUSD.ini",
+    "USDJPY.ini",
+    "XAUUSD.ini",
+    "XAGUSD.ini",
+    "US30.ini",
+    "US500.ini",
+    "US100.ini",
+    "UK100.ini",
     # "GBPUSD.ini",
     # "USDJPY.ini",
     # "USDCHF.ini",

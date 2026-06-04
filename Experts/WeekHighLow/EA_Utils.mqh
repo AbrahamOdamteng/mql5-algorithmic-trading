@@ -177,9 +177,9 @@ double Calculate_Lot_Size_V3(double riskPercentage,
 
 
 
-void PlacePendingOrder(PriceCluster &cluster, WeekData &weeks[], CTrade &trade, int takeProfitMultiplier, double atrVal){
+void PlacePendingOrder(PriceCluster &cluster, WeekData &weeks[], CTrade &trade, int takeProfitMultiplier, double atrVal, double riskPercentage){
 
-   placeImpulseContinuationOrders(cluster, weeks,trade,takeProfitMultiplier, atrVal);
+   placeImpulseContinuationOrders(cluster, weeks,trade,takeProfitMultiplier, atrVal, riskPercentage);
 }
 
 
@@ -466,7 +466,7 @@ double NormalizePrice(double price)
 }
 
 
-void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  CTrade &trade, int takeProfitMultiplier, double atrVal){
+void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  CTrade &trade, int takeProfitMultiplier, double atrVal, double riskPercentage){
 
    Print(
       "SYMBOL_FILLING_MODE=",
@@ -602,7 +602,7 @@ if(shortTpDistance < minStopDistance)
    }
 
    if(cluster.seedLevel.lineType == WEEK_HIGH){
-      volume = Calculate_Lot_Size_V2(1000, longEntryPrice, longStopLoss );
+      volume = Calculate_Lot_Size_V3(riskPercentage, longEntryPrice, longStopLoss);
       string comment = tradeComment(wd.highTime, "H", wd.highImpulse, wd.highPullback,cluster);
 
       PrintOrderDistances(longEntryPrice,longStopLoss, longTakeProfit);
@@ -619,7 +619,7 @@ if(shortTpDistance < minStopDistance)
       }
    } else {
 
-      volume = Calculate_Lot_Size_V2(1000, shortEntryPrice, shortStopLoss );
+      volume = Calculate_Lot_Size_V3(riskPercentage, shortEntryPrice, shortStopLoss);
 
       string comment = tradeComment(wd.lowTime, "L", wd.lowImpulse, wd.lowPullback,cluster);
       PrintOrderDistances(shortEntryPrice, shortStopLoss, shortTakeProfit);
