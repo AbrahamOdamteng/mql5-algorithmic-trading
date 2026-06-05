@@ -2,13 +2,13 @@
 
 ## Current EA Flow
 
-The active EA signal path is impulse continuation V2.
+The active EA signal path is clustered impulse continuation.
 
 1. Push the latest closed bar into `g_ImpulseBuffer` and `g_pullbackBuffer`.
 2. Call `calculatePullbacks()` to fill pullback values once the relevant bar ages out to the oldest buffer position.
 3. Call `detectWeeks()` to either create a new period or update the current period.
 4. Call `detectWeekHighLows()` to create high/low levels for the completed period or update active line status.
-5. Call `detectImpulseContinuationSignalV2()` separately for highs and lows.
+5. Call `DetectClusteredImpulseContinuationSignal()` separately for highs and lows.
 6. If a high signal is detected, take the last high cluster and call `PlacePendingOrder()`.
 7. If a low signal is detected, take the last low cluster and call `PlacePendingOrder()`.
 
@@ -62,21 +62,22 @@ For a low pullback:
 - Stop if the low is breached.
 - Track the maximum rise from the low to a later high.
 
-## Active V2 Signal Logic
+## Active Clustered Signal Logic
 
-`detectImpulseContinuationSignalV2()` works from the last completed period.
+`DetectClusteredImpulseContinuationSignal()` works from the last completed period.
 
 It:
 
 - Gets the matching `WeekData` and `WeekHighLow` entry.
 - Computes required impulse, required minimum pullback, and cluster size from ATR multipliers.
-- Uses `helper()` to validate impulse/pullback conditions.
-- Builds a `PriceCluster` from the seed level and older qualifying levels.
+- Uses `IsImpulseContinuationLevelQualified()` to validate the seed level's impulse/pullback conditions.
+- Builds a `PriceCluster` from the seed level and older nearby levels until a level breaks the cluster.
+- Requires `ArraySize(priceCluster) >= g_MinClusterSize` before returning a tradeable signal.
 - Draws a signal arrow.
 - Appends the cluster to the relevant cluster array.
 - Returns `true` to the EA.
 
-Important note: V2 requires a minimum pullback with `actualPullback >= requiredPullback`, while V1 used a maximum pullback rule with `actualPullback <= maxPullback`.
+Important note: the active path requires a minimum pullback with `actualPullback >= requiredPullback`, while V1 used a maximum pullback rule with `actualPullback <= maxPullback`.
 
 ## Active Order Logic
 
@@ -100,6 +101,6 @@ The active lot sizing call uses `g_Risk_Percentage` via `Calculate_Lot_Size_V3()
 
 ## Indicator Flow Difference
 
-The indicator currently calls `detectImpulseSignal()` rather than the EA's active `detectImpulseContinuationSignalV2()`.
+The indicator currently calls `detectImpulseSignal()` rather than the EA's active `DetectClusteredImpulseContinuationSignal()`.
 
 The indicator also processes chart array index `0`, which is the currently forming candle. The EA processes only closed bars.

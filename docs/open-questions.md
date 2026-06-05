@@ -9,7 +9,7 @@ These are the decisions that should be clarified before larger refactors or stra
 
 ## Indicator Alignment
 
-1. Should the indicator mirror the EA's active `detectImpulseContinuationSignalV2()` path?
+1. Should the indicator mirror the EA's active `DetectClusteredImpulseContinuationSignal()` path?
 2. Should the indicator process only closed bars to match EA behavior?
 3. Should indicator object deletion be limited to this project's object prefixes?
 

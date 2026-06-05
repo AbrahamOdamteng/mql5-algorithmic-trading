@@ -47,12 +47,36 @@ void AppendWeekLevel(WeekHighLow &levels[], WeekHighLow &newLevel)
    levels[currentSize] = newLevel;
 }
 
-bool doesPriceBreakCluster(WeekHighLow &baseLevel, WeekHighLow &candidateLevel, double clusterSize){
+bool DoesLevelBreakCluster(WeekHighLow &baseLevel, WeekHighLow &candidateLevel, double clusterSize){
 
    if(baseLevel.lineType == WEEK_HIGH ){
       return candidateLevel.price > (baseLevel.price + clusterSize) ;
    }else{
       return candidateLevel.price < (baseLevel.price - clusterSize) ;
+   }
+}
+
+void BuildUnbrokenPriceCluster(
+   WeekHighLow &myWeekHighLow[],
+   int baseLevelIndex,
+   double clusterSize,
+   WeekHighLow &priceCluster[]
+){
+   ArrayResize(priceCluster, 0);
+
+   WeekHighLow basePriceLevel = myWeekHighLow[baseLevelIndex];
+   AppendWeekLevel(priceCluster, basePriceLevel);
+
+   for(int i = baseLevelIndex - 1; i >= 0; i--){
+      WeekHighLow candidateLevel = myWeekHighLow[i];
+
+      if(DoesLevelBreakCluster(basePriceLevel, candidateLevel, clusterSize)){
+         break;
+      }
+
+      if(IsWithinClusterRange(basePriceLevel, candidateLevel, clusterSize)){
+         AppendWeekLevel(priceCluster, candidateLevel);
+      }
    }
 }
 
@@ -73,6 +97,10 @@ bool detectCluster(MqlRates &currentBar, MqlRates &previouseBar, WeekData  &myWe
 
    int lastIndex               = arraySize - 1;
    int indexOfLastFinishedWeek = lastIndex - 1;
+   if(indexOfLastFinishedWeek < 0){
+      return false;
+   }
+
    WeekData lastweek           = myWeekData[indexOfLastFinishedWeek];
    double clusterSize          = lastweek.weeklyATR * atrClusterMultiplier;
 
@@ -83,17 +111,7 @@ bool detectCluster(MqlRates &currentBar, MqlRates &previouseBar, WeekData  &myWe
    WeekHighLow basePriceLevel = myWeekHighLow[indexOfLastFinishedWeek];
    WeekHighLow priceCluster[];
 
-   AppendWeekLevel(priceCluster,basePriceLevel);
-
-   for(int i = indexOfLastFinishedWeek -1; i >= 0; i--){
-      WeekHighLow weekHigh = myWeekHighLow[i];
-      if(doesPriceBreakCluster(basePriceLevel, weekHigh, clusterSize)){
-         break;
-      }
-      if(IsWithinClusterRange(basePriceLevel, weekHigh, clusterSize)){
-         AppendWeekLevel(priceCluster,weekHigh);
-      }
-   }
+   BuildUnbrokenPriceCluster(myWeekHighLow, indexOfLastFinishedWeek, clusterSize, priceCluster);
 
    int sizeOfCluster = ArraySize(priceCluster);
 
@@ -263,7 +281,7 @@ bool detectImpulseContinuationSignalV1(
 
 
 
-bool helper(   
+bool IsImpulseContinuationLevelQualified(
    WeekData &myWeekData,
    WeekHighLow &myWeekHighLow,
    double impulseATRMultiplier,
@@ -295,17 +313,18 @@ bool helper(
       actualImpulse  >= requiredImpulse &&
       actualPullback >= requiredPullback;
 
-      return validSignal;
+   return validSignal;
 }
 
 
 
-bool detectImpulseContinuationSignalV2(
+bool DetectClusteredImpulseContinuationSignal(
    MqlRates &currentBar,
    MqlRates &previouseBar,
    WeekData &myWeekData[],
    WeekHighLow &myWeekHighLow[],
    PriceCluster &priceClusterArray[],
+   int minClusterSize,
    double impulseATRMultiplier,
    double minPullbackATRMultiplier,
    double atrClusterMultiplier
@@ -324,7 +343,7 @@ bool detectImpulseContinuationSignalV2(
    }
 
    if(MathAbs(arraySize - arraySizeHL) > 1){
-      Print("detectImpulseContinuationSignal => ERROR: WeekData and WeekHighLow arrays are out of sync");
+      Print("DetectClusteredImpulseContinuationSignal => ERROR: WeekData and WeekHighLow arrays are out of sync");
       return false;
    }
 
@@ -332,7 +351,7 @@ bool detectImpulseContinuationSignalV2(
    int indexOfLastFinishedWeek = lastIndex - 1;
 
    if(indexOfLastFinishedWeek < 0){
-      Print("detectImpulseContinuationSignal => indexOfLastFinishedWeek < 0");
+      Print("DetectClusteredImpulseContinuationSignal => indexOfLastFinishedWeek < 0");
       return false;
    }
 
@@ -346,16 +365,16 @@ bool detectImpulseContinuationSignalV2(
    if(basePriceLevel.lineType == WEEK_HIGH  && 
       (isStartOfNewWeek || lastWeek.highPullbackCalculatedTime == currentBar.time))
    {
-      validSignal = helper(lastWeek,basePriceLevel,impulseATRMultiplier,minPullbackATRMultiplier);
+      validSignal = IsImpulseContinuationLevelQualified(lastWeek,basePriceLevel,impulseATRMultiplier,minPullbackATRMultiplier);
    }
    else if(basePriceLevel.lineType == WEEK_LOW && lastWeek.lowPullback > -1 &&
       (isStartOfNewWeek  || lastWeek.lowPullbackCalculatedTime == currentBar.time))
    {
-      validSignal = helper(lastWeek,basePriceLevel,impulseATRMultiplier,minPullbackATRMultiplier);
+      validSignal = IsImpulseContinuationLevelQualified(lastWeek,basePriceLevel,impulseATRMultiplier,minPullbackATRMultiplier);
    }
    else
    {
-      // Print("detectImpulseContinuationSignal => Nothing detected");
+      // Print("DetectClusteredImpulseContinuationSignal => Nothing detected");
       return false;
    }
 
@@ -365,27 +384,10 @@ bool detectImpulseContinuationSignalV2(
    }
 
    WeekHighLow priceCluster[];
-   Append(priceCluster,basePriceLevel );
+   BuildUnbrokenPriceCluster(myWeekHighLow, indexOfLastFinishedWeek, clusterSize, priceCluster);
 
-   for (int i = indexOfLastFinishedWeek; i >= 0; i--)
-   {
-      WeekData wd = myWeekData[i];
-      WeekHighLow whl = myWeekHighLow[i];
-      if(wd.weekNumber >= lastWeek.weekNumber){
-         continue;
-      }
-
-
-      if(doesPriceBreakCluster(basePriceLevel, whl, clusterSize)){
-         break;
-      }
-
-      bool isWithinRange = IsWithinClusterRange(basePriceLevel, whl, clusterSize);
-      bool valid = helper(wd,whl,impulseATRMultiplier,minPullbackATRMultiplier);
-
-      if(valid && isWithinRange){
-            Append(priceCluster,whl );
-      }
+   if(ArraySize(priceCluster) < minClusterSize){
+      return false;
    }
 
    PriceCluster detectedCluster = CreatePriceCluster(

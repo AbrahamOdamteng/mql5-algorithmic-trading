@@ -13,23 +13,23 @@ This affects:
 - `detectCluster()`
 - `detectImpulseSignal()`
 - `detectImpulseContinuationSignalV1()`
-- `detectImpulseContinuationSignalV2()`
+- `DetectClusteredImpulseContinuationSignal()`
 
 This matches the weekly terminology used by the main data structures and helper names.
 
 ### EA And Indicator Do Not Show The Same Strategy
 
-The EA uses `detectImpulseContinuationSignalV2()`.
+The EA uses `DetectClusteredImpulseContinuationSignal()`.
 
 The indicator uses `detectImpulseSignal()`.
 
 This means chart drawings/signals may not represent what the EA actually trades.
 
-### V2 Pullback Rule Requires Minimum Pullback
+### Active Pullback Rule Requires Minimum Pullback
 
-`detectImpulseContinuationSignalV2()` delegates validation to `helper()`.
+`DetectClusteredImpulseContinuationSignal()` delegates validation to `IsImpulseContinuationLevelQualified()`.
 
-`helper()` validates:
+`IsImpulseContinuationLevelQualified()` validates:
 
 ```text
 actualImpulse >= requiredImpulse

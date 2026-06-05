@@ -86,8 +86,8 @@ int OnInit()
       // detectImpulseSignal(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier);
 
 
-      detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_Impulse_ATR_multiplier,g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
-      detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier, g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+      DetectClusteredImpulseContinuationSignal(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_MinClusterSize,g_Impulse_ATR_multiplier,g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+      DetectClusteredImpulseContinuationSignal(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_MinClusterSize,g_Impulse_ATR_multiplier, g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
     
 
     }
@@ -167,8 +167,8 @@ void OnTick()
     // bool lowClusterDetected =  detectImpulseSignal(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier);
 
 
-    bool highClusterDetected = detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_Impulse_ATR_multiplier,g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
-    bool lowClusterDetected  = detectImpulseContinuationSignalV2(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_Impulse_ATR_multiplier, g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+    bool highClusterDetected = DetectClusteredImpulseContinuationSignal(currentBar,previousBar,g_weekData,g_weekHighs,g_clusterHighs,g_MinClusterSize,g_Impulse_ATR_multiplier,g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
+    bool lowClusterDetected  = DetectClusteredImpulseContinuationSignal(currentBar,previousBar,g_weekData,g_weekLows,g_clusterLows,g_MinClusterSize,g_Impulse_ATR_multiplier, g_MinPullback_ATR_multiplier, g_ATR_Cluster_multiplier);
 
 
     if(highClusterDetected){

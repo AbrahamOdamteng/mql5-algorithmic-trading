@@ -27,7 +27,7 @@ On each tick, the EA:
 - Loads the latest three bars.
 - Processes `rates[1]` as the latest closed bar and `rates[2]` as the previous closed bar.
 - Updates buffers and shared strategy state.
-- Calls `detectImpulseContinuationSignalV2()` for highs and lows.
+- Calls `DetectClusteredImpulseContinuationSignal()` for highs and lows.
 - Places a pending order when a signal is detected.
 
 ## Indicator
@@ -48,7 +48,7 @@ On calculation, the indicator:
 - Deletes chart objects during full rebuild.
 - Processes bars in reverse index order.
 - Updates period/high/low state.
-- Calls `detectImpulseSignal()` rather than the EA's active `detectImpulseContinuationSignalV2()`.
+- Calls `detectImpulseSignal()` rather than the EA's active `DetectClusteredImpulseContinuationSignal()`.
 
 ## Shared Include Modules
 
@@ -72,7 +72,7 @@ On calculation, the indicator:
 - Cluster distance tests.
 - Older cluster detection variants.
 - Impulse-only detection.
-- Impulse-continuation detection V1 and V2.
+- Impulse-continuation detection and the active clustered continuation trigger.
 
 `Include/WeekHighLows/rates_circular_buffer.mqh` stores recent `MqlRates` bars and calculates:
 
