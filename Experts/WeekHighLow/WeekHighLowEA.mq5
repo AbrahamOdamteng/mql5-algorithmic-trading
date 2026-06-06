@@ -7,6 +7,7 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
+input ENUM_TIMEFRAMES g_HighLowPeriod = PERIOD_W1;
 
 #include <Trade/Trade.mqh>
 #include <WeekHighLows/datatypes.mqh>

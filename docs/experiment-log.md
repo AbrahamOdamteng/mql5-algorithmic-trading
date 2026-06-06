@@ -130,3 +130,66 @@ Each entry should include:
 - Cross-symbol finding: No exact same parameter set appeared as an accepted candidate across multiple completed symbols.
 - Common region observed among accepted candidates: `g_ATR_Cluster_multiplier` mostly `0.35 -> 0.50`, `g_impulse_lookback_hours` mostly `96 -> 168`, `g_pullback_lookforward_hours` mostly `12 -> 24`, `g_Impulse_ATR_multiplier` mostly `1.3 -> 1.7`, `g_pullback_ATR_multiplier` mostly `0.6 -> 1.0`, and `g_TakeProfitMultiplier` mostly `3` or `5`.
 - Decision or next step: W1 high/low works best so far on `XAUUSD` and `USDJPY`, with usable results on `EURUSD` and `GBPUSD`. Indices did not produce accepted candidates in this batch. Next useful step is to search for a narrowed shared parameter region across `EURUSD`, `GBPUSD`, `USDJPY`, and `XAUUSD`, then run fixed OOS tests.
+
+### 2026-06-05 - EURUSD W1 Clustered High-Impulse Genetic Review
+
+- Goal: Review the latest EURUSD W1 clustered impulse-continuation optimizer and forward-test results to identify candidates for fixed OOS testing.
+- Source files: `docs/results/EURUSD_W1HighLow_Clustered_Genetic_HighImpulse_2000_2018_FWD_20260604.xml` and `.forward.xml`.
+- Test setup: EURUSD, `H1` tester timeframe, W1 high/low clustered signal logic, `2000 -> 2012` in-sample optimization and `2012 -> 2018` optimizer-forward validation.
+- Outcome: `761` optimizer rows and `761` forward rows paired by `Pass`; `177` pairs had positive in-sample and forward profit, `20` pairs had profit/DD ratio `> 2.0` in both periods, `19` remained after the `<= 30%` DD cap, `0` met the strict single-symbol trade-count filter, and `11` met the loose trade-count filter.
+- Best balanced candidates after ratio and DD filters: passes `686`, `689`, `680`, `748`, and `737`.
+- Pass `686`: IS profit `40,854.92`, DD `6.79%`, ratio `6.02`, trades `108`; validation profit `11,646.78`, DD `3.18%`, ratio `3.67`, trades `38`; parameters `3, 0.20, 48, 24, 0.6, 0.4, 1`.
+- Pass `689`: IS profit `102,309.18`, DD `12.28%`, ratio `8.33`, trades `108`; validation profit `30,880.97`, DD `8.92%`, ratio `3.46`, trades `38`; parameters `3, 0.20, 48, 24, 0.6, 0.4, 3`.
+- Pass `680`: IS profit `40,307.37`, DD `13.62%`, ratio `2.96`, trades `132`; validation profit `49,834.64`, DD `8.71%`, ratio `5.72`, trades `57`; parameters `4, 0.30, 144, 24, 0.6, 0.4, 2`.
+- Pass `748`: IS profit `71,112.16`, DD `10.26%`, ratio `6.93`, trades `155`; validation profit `23,393.52`, DD `8.54%`, ratio `2.74`, trades `63`; parameters `3, 0.20, 168, 24, 0.6, 0.4, 2`.
+- Pass `737`: IS profit `58,261.28`, DD `4.52%`, ratio `12.90`, trades `155`; validation profit `14,756.80`, DD `5.65%`, ratio `2.61`, trades `63`; parameters `3, 0.20, 168, 24, 0.6, 0.4, 1`.
+- Parameter order: `g_MinClusterSize`, `g_ATR_Cluster_multiplier`, `g_impulse_lookback_hours`, `g_pullback_lookforward_hours`, `g_Impulse_ATR_multiplier`, `g_MinPullback_ATR_multiplier`, `g_TakeProfitMultiplier`.
+- Decision or next step: The clustered W1 EURUSD run is promising but not accepted because trade count is low on one symbol and OOS has not been tested. Run fixed OOS `2018 -> 2026` tests for passes `686`, `689`, `680`, `748`, and `737`; if any survive, test the same manifold across `GBPUSD`, `USDJPY`, and `XAUUSD`.
+
+### 2026-06-06 - EURUSD D1 Clustered High-Impulse Genetic Review
+
+- Goal: Repeat the clustered impulse-continuation genetic optimizer and forward-test workflow using D1 high/low period logic instead of W1.
+- Source note: Result files under `docs/results` are ephemeral and should not be treated as durable references; this entry records the durable metrics and decisions instead of relying on filenames.
+- Change or experiment: Added global high/low period input `g_HighLowPeriod`, switched the active project default to `PERIOD_D1`, and ran EURUSD clustered genetic optimization with optimizer-forward validation.
+- Test setup: EURUSD, `H1` tester timeframe, D1 high/low clustered signal logic, `2000 -> 2012` in-sample optimization and `2012 -> 2018` optimizer-forward validation.
+- Outcome: `1,018` optimizer rows and `1,018` forward rows paired by `Pass`; `457` pairs had positive in-sample and forward profit, `59` pairs had profit/DD ratio `> 2.0` in both periods, `47` remained after the `<= 30%` DD cap, `28` met the strict single-symbol trade-count filter, and `44` met the loose trade-count filter.
+- Best strict-filter candidates reviewed: passes `426`, `523`, `696`, `631`, and `1011`.
+- Pass `426`: IS profit `307,835.44`, DD `19.76%`, ratio `15.58`, trades `837`; validation profit `134,818.37`, DD `23.39%`, ratio `5.76`, trades `348`; parameters `4, 0.40, 72, 18, 1.4, 0.4, 2`.
+- Pass `523`: IS profit `133,202.12`, DD `21.58%`, ratio `6.17`, trades `1,412`; validation profit `79,333.29`, DD `15.98%`, ratio `4.97`, trades `688`; parameters `3, 0.50, 48, 18, 0.8, 0.6, 1`.
+- Pass `696`: IS profit `168,894.38`, DD `19.71%`, ratio `8.57`, trades `1,006`; validation profit `75,829.28`, DD `16.66%`, ratio `4.55`, trades `469`; parameters `4, 0.50, 72, 12, 0.8, 0.6, 2`.
+- Pass `631`: IS profit `129,156.33`, DD `28.95%`, ratio `4.46`, trades `1,406`; validation profit `119,530.95`, DD `23.16%`, ratio `5.16`, trades `688`; parameters `3, 0.50, 48, 18, 0.8, 0.6, 2`.
+- Pass `1011`: IS profit `84,888.31`, DD `12.97%`, ratio `6.55`, trades `841`; validation profit `63,804.34`, DD `16.57%`, ratio `3.85`, trades `413`; parameters `3, 0.50, 48, 6, 0.8, 0.6, 1`.
+- Decision or next step: D1 clustered optimization was materially stronger than the W1 clustered run. Set up fixed OOS `2018 -> 2026` tests for all `44` loose-filter candidates rather than only the top strict-filter candidates.
+
+### 2026-06-06 - EURUSD D1 Clustered 44-Candidate OOS Batch
+
+- Goal: Test all `44` loose-filter EURUSD D1 clustered candidates on the `2018 -> 2026` out-of-sample period.
+- Source note: Result files under `docs/results` are ephemeral and should not be treated as durable references; this entry records the durable metrics and decisions instead of relying on filenames.
+- Test setup: EURUSD, `H1` tester timeframe, D1 high/low clustered signal logic, fixed single-test OOS runs, optimization disabled, `g_Risk_Percentage = 1.0`, `2018.01.01 -> 2026.05.31`.
+- OOS acceptance criteria used: profit `> 0`, profit/DD ratio `> 2.0`, and equity DD `<= 30%`.
+- Outcome: `44` reports parsed, `29` candidates had positive OOS profit, `4` candidates had OOS profit/DD ratio `> 2.0`, `19` candidates had OOS equity DD `<= 30%`, and `3` candidates met all OOS acceptance criteria.
+- Accepted OOS candidate pass `816`: profit `42,649.03`, equity DD `12.93%`, ratio `3.30`, trades `78`, profit factor `1.59`, recovery `2.42`, Sharpe `7.68`; parameters `4, 0.20, 144, 24, 1.8, 1.0, 5`.
+- Accepted OOS candidate pass `8`: profit `20,822.93`, equity DD `8.91%`, ratio `2.34`, trades `44`, profit factor `1.52`, recovery `1.87`, Sharpe `29.21`; parameters `3, 0.10, 96, 12, 0.8, 1.0, 4`.
+- Accepted OOS candidate pass `707`: profit `55,777.64`, equity DD `26.85%`, ratio `2.08`, trades `790`, profit factor `1.13`, recovery `1.46`, Sharpe `2.49`; parameters `2, 0.50, 168, 18, 0.8, 0.8, 1`.
+- Notable near miss pass `537`: profit `149,627.22`, equity DD `33.70%`, ratio `4.44`, trades `646`, profit factor `1.17`; parameters `3, 0.20, 96, 6, 0.6, 0.4, 5`. This had the best OOS profit/DD ratio and profit, but exceeded the `30%` DD cap.
+- Parameter order: `g_MinClusterSize`, `g_ATR_Cluster_multiplier`, `g_impulse_lookback_hours`, `g_pullback_lookforward_hours`, `g_Impulse_ATR_multiplier`, `g_MinPullback_ATR_multiplier`, `g_TakeProfitMultiplier`.
+- Decision or next step: Passes `816`, `8`, and `707` survived EURUSD OOS. Pass `707` is the most useful robustness candidate because it has much higher trade count; passes `816` and `8` are cleaner on DD/ratio but lower frequency. Next useful step is cross-symbol fixed testing of these three candidates, with pass `537` optionally tracked as a high-return/high-DD near miss.
+
+### 2026-06-06 - Cross-Symbol Fixed Validation For EURUSD D1 Clustered Survivors
+
+- Goal: Validate whether the EURUSD D1 clustered OOS survivors generalize across a compact multi-market basket before considering them robust manifolds.
+- Source note: Result files under `docs/results` are ephemeral and should not be treated as durable references; this entry records the durable metrics and decisions instead of relying on filenames.
+- Candidates tested: passes `707`, `816`, and `8`.
+- Symbol basket: `GBPUSD`, `USDJPY`, `EURJPY`, `XAUUSD`, `US500`, and `US30`.
+- Test setup: Fixed single-test runs with optimization disabled, `H1` tester timeframe, D1 high/low clustered signal logic, `g_Risk_Percentage = 1.0`.
+- Test segmentation: in-sample `2000.01.01 -> 2012.01.01`, validation `2012.01.01 -> 2018.01.01`, and OOS `2018.01.01 -> 2026.05.31`.
+- Coverage: `54` expected reports and `54` parsed reports; no missing pass/symbol/segment combinations.
+- Acceptance criteria used per row: profit `> 0`, profit/DD ratio `> 2.0`, and equity DD `<= 30%`.
+- Overall outcome: `33` of `54` tests were profitable, `13` had ratio `> 2.0`, `41` had DD `<= 30%`, and `13` met all row-level acceptance criteria.
+- Pass `816` aggregate: total profit `285,093.42`, OOS profit `185,893.56`, positive rows `13 / 18`, accepted rows `6 / 18`, OOS-positive symbols `5 / 6`, OOS-accepted symbols `4 / 6`, max DD `34.67%`, total trades `995`.
+- Pass `707` aggregate: total profit `105,342.89`, OOS profit `66,764.44`, positive rows `10 / 18`, accepted rows `4 / 18`, OOS-positive symbols `4 / 6`, OOS-accepted symbols `1 / 6`, max DD `61.99%`, total trades `11,182`.
+- Pass `8` aggregate: total profit `-41,489.78`, OOS profit `15,677.60`, positive rows `10 / 18`, accepted rows `3 / 18`, OOS-positive symbols `4 / 6`, OOS-accepted symbols `1 / 6`, max DD `39.40%`, total trades `699`.
+- Pass `816` symbol notes: strongest broad candidate; OOS was positive on `EURJPY`, `GBPUSD`, `US500`, `USDJPY`, and `XAUUSD`, with `US30` failing OOS. Strongest OOS contributors were `US500`, `XAUUSD`, `EURJPY`, and `USDJPY`.
+- Pass `707` symbol notes: very strong on `XAUUSD` across all three segments, but weak as a broad manifold. `XAUUSD` produced IS profit `92,302.20`, validation profit `63,475.15`, OOS profit `107,779.56`, max DD `15.29%`, and all three segments accepted. Other symbols were mixed or poor, especially `EURJPY`, `GBPUSD`, and `US500` across earlier segments.
+- Pass `8` symbol notes: too weak overall and negative in aggregate, though it had isolated accepted rows on `XAUUSD` IS, `USDJPY` validation, and `GBPUSD` OOS.
+- Decision or next step: Promote pass `816` as the best broad cross-symbol candidate from this batch, but not yet as a clean deployment candidate because aggregate IS was slightly negative, max DD exceeded `30%`, and `US30` failed OOS. Treat pass `707` as an `XAUUSD` specialist candidate rather than a broad manifold. Deprioritize pass `8`. Next useful step is broader fixed-symbol testing and/or aggregate portfolio review for pass `816`, including EURUSD plus the cross-symbol basket.

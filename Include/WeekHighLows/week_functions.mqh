@@ -167,7 +167,7 @@ void calculateWeeklyATR(WeekData &weeks[], int period, MqlRates &currentBar)
 void detectWeeks( MqlRates &currentBar, MqlRates &previouseBar,WeekData &weeks[], int atrPeriod, RatesCircularBuffer &impulseBuffer){
 
    // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
-   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time, PERIOD_W1);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time, g_HighLowPeriod);
    if (isStartOfNewWeek){
       DrawCurrentBarLine(currentBar.time);
       calculateWeeklyATR(weeks, atrPeriod, currentBar);
@@ -185,7 +185,7 @@ void detectWeeks( MqlRates &currentBar, MqlRates &previouseBar,WeekData &weeks[]
 
 void detectWeekHighLows(  MqlRates &currentBar, MqlRates &previouseBar , WeekData &weeks[], WeekHighLow &weekHighs[], WeekHighLow &weekLows[]){
    // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
-   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time, PERIOD_W1);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time, g_HighLowPeriod);
    int weekSize          = ArraySize(weeks);
    int weekHighSize      = ArraySize(weekHighs);
    int weekLowSize       = ArraySize(weekLows);

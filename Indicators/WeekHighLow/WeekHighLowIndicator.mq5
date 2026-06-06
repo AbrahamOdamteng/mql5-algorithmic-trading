@@ -8,6 +8,8 @@
 #property version "1.00"
 #property indicator_chart_window
 
+input ENUM_TIMEFRAMES g_HighLowPeriod = PERIOD_D1;
+
 #include <WeekHighLows/datatypes.mqh>
 #include <WeekHighLows/cluster_logic.mqh>
 #include <WeekHighLows/week_functions.mqh>

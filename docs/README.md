@@ -57,6 +57,7 @@ Current ratio-based review criteria:
 - `discovery-findings.md`: Important findings, risks, and mismatches found during discovery.
 - `open-questions.md`: Decisions that need clarification before larger changes.
 - `experiment-log.md`: Running log of experiments and outcomes. Do not update it unless explicitly asked.
+- `utils/README.md`: Reusable PowerShell utilities for parsing MT5 optimizer/forward XML files and fixed OOS `.xml.htm` reports.
 
 ## Discovery Date
 
