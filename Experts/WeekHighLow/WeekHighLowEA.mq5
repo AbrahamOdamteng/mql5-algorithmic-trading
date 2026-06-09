@@ -7,7 +7,7 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-input ENUM_TIMEFRAMES g_HighLowPeriod = PERIOD_W1;
+input ENUM_TIMEFRAMES g_HighLowPeriod = PERIOD_D1;
 
 #include <Trade/Trade.mqh>
 #include <WeekHighLows/datatypes.mqh>
@@ -22,6 +22,7 @@ CTrade g_trade;
 input int     g_ATR_Period              = 14;
 input int     g_MinClusterSize          = 2;
 input double  g_ATR_Cluster_multiplier  = 0.1;
+input double  g_ATR_StopLoss_multiplier = 0.1;
 
 input int     g_impulse_lookback_hours      = 24;
 input int     g_pullback_lookforward_hours  = 24;
@@ -31,6 +32,7 @@ input double  g_MinPullback_ATR_multiplier = 0.5;
 
 input int     g_TakeProfitMultiplier    = 2;
 input double  g_Risk_Percentage         = 1.0;
+input bool    g_EnableTradeCsvLogging   = true;
 
 
 
@@ -95,8 +97,10 @@ int OnInit()
 
     lastProcessedBarTime = iTime(_Symbol,_Period,0);
 
-    // DeleteTradeCsv();
-    // OpenTradeCsv();
+    if(g_EnableTradeCsvLogging){
+      // DeleteTradeCsv();
+      OpenTradeCsv();
+    }
     return(INIT_SUCCEEDED);
   }
 //+------------------------------------------------------------------+
@@ -115,17 +119,21 @@ void OnDeinit(const int reason)
          g_pullbackBuffer = NULL;
       }
 
-      // CloseTradeCsv();
+      if(g_EnableTradeCsvLogging){
+         CloseTradeCsv();
+      }
    
   }
 
-// void OnTradeTransaction(
-//    const MqlTradeTransaction& trans,
-//    const MqlTradeRequest& request,
-//    const MqlTradeResult& result
-// ){
-//   OnTradeTransactionHelper(trans,request,result);
-// }
+void OnTradeTransaction(
+   const MqlTradeTransaction& trans,
+   const MqlTradeRequest& request,
+   const MqlTradeResult& result
+){
+   if(g_EnableTradeCsvLogging){
+      OnTradeTransactionHelper(trans,request,result);
+   }
+}
 
 
 
@@ -176,16 +184,16 @@ void OnTick()
       Print("High Cluster Detected!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
       PriceCluster last = GetLast(g_clusterHighs);
       WeekData lastWeek = GetSecondToLast(g_weekData);
-      double clusterHeight = lastWeek.weeklyATR * g_ATR_Cluster_multiplier;
-      PlacePendingOrder(last, g_weekData,g_trade, g_TakeProfitMultiplier, clusterHeight, g_Risk_Percentage);
+      double stopLossDistance = lastWeek.weeklyATR * g_ATR_StopLoss_multiplier;
+      PlacePendingOrder(last, g_weekData,g_trade, g_TakeProfitMultiplier, stopLossDistance, g_Risk_Percentage);
     }
 
     if(lowClusterDetected){
       Print("Low Cluster Detected!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
       PriceCluster last = GetLast(g_clusterLows);
       WeekData lastWeek = GetSecondToLast(g_weekData);
-      double clusterHeight = lastWeek.weeklyATR * g_ATR_Cluster_multiplier;
-      PlacePendingOrder(last,g_weekData, g_trade, g_TakeProfitMultiplier,clusterHeight, g_Risk_Percentage);
+      double stopLossDistance = lastWeek.weeklyATR * g_ATR_StopLoss_multiplier;
+      PlacePendingOrder(last,g_weekData, g_trade, g_TakeProfitMultiplier,stopLossDistance, g_Risk_Percentage);
     }
    
   }

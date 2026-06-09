@@ -43,6 +43,6 @@ These are the decisions that should be clarified before larger refactors or stra
 1. Are current tester presets targeting the intended strategy version?
 2. Should optimizer inputs include ATR period and min cluster size, or are those intentionally fixed?
 3. Should M15 tests use adjusted lookback values if inputs remain bar counts?
-4. What aggregate trade-count threshold should be required for multi-symbol FTMO-style validation?
-5. Which symbol basket should be used to prove that a single manifold is robust across FX, metals, and indices?
+4. Current pre-CSV aggregate trade-count elimination thresholds: total trades across all tested symbols and periods must be `>= 1500`, validation plus OOS trades must be `>= 1000`, and OOS trades must be `>= 500`. These are screening gates before FTMO trade CSV analysis, not final ranking criteria.
+5. Current phase-1 basket decision: use `EURUSD`, `GBPUSD`, `USDJPY`, `EURJPY`, `XAUUSD`, `XAGUSD`, `US500`, `US30`, `US100`, `UK100`, `USOIL`, and `UKOIL`. Only the FX symbols showed effective full `2000 -> 2012` start coverage in the start-date probe. Treat `US30`, `US500`, `UK100`, `XAUUSD`, `XAGUSD`, `USOIL`, and `UKOIL` as partial-history IS symbols. Treat `US100` as validation/OOS-only from available history and do not use it for optimization.
 6. What per-symbol loss or drawdown cap should be used so one symbol cannot dominate portfolio risk?

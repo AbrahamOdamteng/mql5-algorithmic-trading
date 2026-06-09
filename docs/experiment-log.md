@@ -193,3 +193,128 @@ Each entry should include:
 - Pass `707` symbol notes: very strong on `XAUUSD` across all three segments, but weak as a broad manifold. `XAUUSD` produced IS profit `92,302.20`, validation profit `63,475.15`, OOS profit `107,779.56`, max DD `15.29%`, and all three segments accepted. Other symbols were mixed or poor, especially `EURJPY`, `GBPUSD`, and `US500` across earlier segments.
 - Pass `8` symbol notes: too weak overall and negative in aggregate, though it had isolated accepted rows on `XAUUSD` IS, `USDJPY` validation, and `GBPUSD` OOS.
 - Decision or next step: Promote pass `816` as the best broad cross-symbol candidate from this batch, but not yet as a clean deployment candidate because aggregate IS was slightly negative, max DD exceeded `30%`, and `US30` failed OOS. Treat pass `707` as an `XAUUSD` specialist candidate rather than a broad manifold. Deprioritize pass `8`. Next useful step is broader fixed-symbol testing and/or aggregate portfolio review for pass `816`, including EURUSD plus the cross-symbol basket.
+
+### 2026-06-06 - ATR Cluster And Stop-Loss Multiplier Split
+
+- Goal: Separate the multiplier used for high/low cluster sizing from the multiplier used for stop-loss and entry distance sizing.
+- Change or experiment: Added `g_ATR_StopLoss_multiplier` to `Experts/WeekHighLow/WeekHighLowEA.mq5`.
+- Change or experiment: Kept `g_ATR_Cluster_multiplier` on the clustered signal detection path, and switched active order-distance calculation to `lastWeek.weeklyATR * g_ATR_StopLoss_multiplier`.
+- Change or experiment: Updated pass `816`, `707`, and `8` fixed presets so `g_ATR_StopLoss_multiplier` initially equals each preset's existing `g_ATR_Cluster_multiplier`, preserving baseline behavior until deliberately changed.
+- Expected effect on next test: None, as long as `g_ATR_StopLoss_multiplier == g_ATR_Cluster_multiplier`. The split only creates the ability to test different cluster and stop-loss multipliers later.
+- Verification: Compiled `WeekHighLowEA.mq5` with MetaEditor. Result was `0` errors and `1` existing warning in `TradeLogger.mqh` about possible `ulong` to `int` conversion.
+- Operational decision: Future assistant sessions should not launch MT5 optimizer or backtest runs unless the user explicitly asks for the specific run. The user will run tests because MT5 must be available and test duration needs to be planned.
+
+### 2026-06-06 - Guarded CSV Trade Logging Re-Enabled
+
+- Goal: Re-enable the existing CSV trade logger without requiring future comment/uncomment code changes.
+- Change or experiment: Added `g_EnableTradeCsvLogging` input to `Experts/WeekHighLow/WeekHighLowEA.mq5`, defaulting to `true`.
+- Change or experiment: Guarded `DeleteTradeCsv()` and `OpenTradeCsv()` in `OnInit()`, `CloseTradeCsv()` in `OnDeinit()`, and `OnTradeTransactionHelper()` forwarding in `OnTradeTransaction()` behind `g_EnableTradeCsvLogging`.
+- Expected behavior: When `g_EnableTradeCsvLogging` is `true`, trade events are written to `all_symbols_oanda_trades.csv` through `TradeLogger.mqh`. When `false`, CSV creation/writing is disabled from EA inputs without editing source comments.
+- Verification: Compiled `WeekHighLowEA.mq5` with MetaEditor. Result was `0` errors and `1` existing warning in `TradeLogger.mqh` about possible `ulong` to `int` conversion.
+
+### 2026-06-07 - Closed-PnL FTMO Survivability Analysis
+
+- Goal: Evaluate whether the current pass `816` multi-symbol result can survive FTMO-style challenge rules using the generated trade CSV.
+- Source file: `docs/results/all_symbols_oanda_trades.csv`.
+- Change or experiment: Added reusable utility `docs/utils/Analyze-FtmoClosedPnlSurvivability.ps1`.
+- Method: Run a rolling challenge simulation from each closed trade event, walking forward until profit target, global loss, daily loss, or end of data. The first version used realized closed P/L only, with raw CSV dollar P/L.
+- Important limitation: The CSV does not contain intratrade floating equity, so this is a closed-PnL proxy. True FTMO daily loss, global loss, and profit-target events may occur before trades close.
+- Raw closed-PnL result with inferred `7` symbols and `700,000` starting balance: `1,209` starts, `1,112` passes, `0` fails, `97` unresolved, median pass duration `1,160.38` days, median closed trades to pass `158`.
+- Diagnostic raw closed-PnL result with `100,000` starting balance: failures appeared immediately, with `778` passes, `427` fails, and `8` unresolved. This confirmed that the `0`-failure result at `700,000` came from the large capital assumption, not from absence of losing streaks.
+- Refined method: Added `PnlMode NormalizedRisk`, which estimates each closed trade's R-multiple from the original `1%` single-symbol risk and replays it against one communal FTMO account using a fixed percentage of current communal balance per trade.
+- Normalized communal-risk result at `100,000` starting balance and `0.25%` risk per trade: `1,052` passes, `80` fails, `77` unresolved, resolved pass rate `92.93%`, median pass duration `722.54` days, median closed trades to pass `91`.
+- Normalized communal-risk result at `100,000` starting balance and `0.5%` risk per trade: `1,009` passes, `188` fails, `12` unresolved, resolved pass rate `84.29%`, median pass duration `275.88` days, median closed trades to pass `39`.
+- Normalized communal-risk result at `100,000` starting balance and `1.0%` risk per trade: `788` passes, `412` fails, `9` unresolved, resolved pass rate `65.67%`, median pass duration `82.76` days, median closed trades to pass `12`.
+- Trade frequency context: The CSV contained `1,209` completed trades across `7` symbols from `2000-01-31` to `2026-05-07`, averaging `0.88` completed trades per week overall and `0.13` per symbol per week.
+- Decision or next step: The `1.0%` communal risk setting reaches the target much faster but fails too often. The `0.5%` setting is a more balanced candidate, while `0.25%` appears safer but likely too slow for a practical FTMO challenge. Exact FTMO validation needs equity logging, not only closed-trade CSV analysis.
+
+### 2026-06-07 - Trade CSV Schema Improvements
+
+- Goal: Make future trade CSV analysis easier, especially matching entries to exits and replaying results at different risk percentages.
+- Change or experiment: Added `trade_id` to the CSV logger output, using MT5 `DEAL_POSITION_ID`. The existing `ticket` column remains the deal ticket for compatibility.
+- Change or experiment: Added `risk_percentage` to the CSV logger output, using the EA input `g_Risk_Percentage` active at the time of the deal event.
+- Change or experiment: Fixed the logger's `FileTell()` temporary variable type from `int` to `ulong`.
+- Expected behavior: Future CSV files should be easier to group by trade/position and should contain enough information to normalize trade outcomes by the original percentage risk setting.
+- Verification: Compiled `WeekHighLowEA.mq5` with MetaEditor. Result was `0` errors and `0` warnings.
+
+### 2026-06-07 - EURUSD D1 Stop-Loss Split Genetic Test Setup
+
+- Goal: Run an overnight EURUSD D1 genetic optimizer-forward test to determine whether separating stop-loss sizing from cluster sizing improves results.
+- Config file: `Files/WeekHighLow/EURUSD_D1_StopLossSplit.ini`.
+- Preset file: `Profiles/Tester/ImpulseContinuation_D1HighLow_Genetic_StopLossSplit.set`.
+- Test setup: EURUSD, `H1` tester timeframe, `2000.01.01 -> 2018.01.01`, genetic optimization enabled, MT5 forward mode enabled.
+- Report target: `reports/EURUSD_D1HighLow_Clustered_Genetic_StopLossSplit_2000_2018_FWD_20260607.xml`.
+- Key change: `g_ATR_Cluster_multiplier` remains optimized over `0.1 -> 0.5` in `0.1` steps, while `g_ATR_StopLoss_multiplier` is optimized independently over `0.05 -> 0.5` in `0.05` steps.
+- CSV logging: Disabled for this genetic run with `g_EnableTradeCsvLogging=false`.
+- Autorun setup: `Files/WeekHighLow/autorun.ps1` now runs only `EURUSD_D1_StopLossSplit.ini` and uses a `1440` minute timeout.
+- Verification: Compiled `WeekHighLowEA.mq5` with MetaEditor before setup handoff. Result was `0` errors and `0` warnings.
+- Decision or next step: User will run the overnight test manually and provide results in the morning. Assistant should not launch the test.
+
+### 2026-06-08 - EURUSD D1 Stop-Loss Split Genetic Three-Run Review
+
+- Goal: Review three independent EURUSD D1 stop-loss split genetic optimizer-forward runs to determine whether they converge on a useful parameter region.
+- Source files: `docs/results/StopLossSplit/EURUSD_D1HighLow_Clustered_Genetic_StopLossSplit_2000_2018_FWD_20260607*.xml` and matching `.forward.xml` files.
+- Run notes: RUN1 was the original overnight run. RUN2 was run without clearing tester cache. RUN3 was run after clearing tester cache.
+- Parser update: Added `StopLossMult` output to `docs/utils/Analyze-Mt5OptimizerForward.ps1` so `g_ATR_StopLoss_multiplier` is visible in candidate reviews.
+- Exported candidate summaries: `docs/results/StopLossSplit/RUN1_loose_candidates.csv`, `RUN2_loose_candidates.csv`, and `RUN3_loose_candidates.csv`.
+- RUN1 counts: `3,209` optimizer rows, `3,200` forward rows, `3,200` paired rows, `1,665` positive-profit pairs, `263` ratio-qualified pairs, `219` after DD cap, `120` strict candidates, and `192` loose candidates.
+- RUN2 counts: `6,205` optimizer rows, `2,986` forward rows, `2,986` paired rows, `1,617` positive-profit pairs, `378` ratio-qualified pairs, `332` after DD cap, `129` strict candidates, and `285` loose candidates. RUN2 is less clean for convergence review because cache was not cleared and optimizer/forward row counts were mismatched.
+- RUN3 counts: `2,968` optimizer rows, `2,968` forward rows, `2,968` paired rows, `1,661` positive-profit pairs, `264` ratio-qualified pairs, `212` after DD cap, `125` strict candidates, and `194` loose candidates.
+- RUN1 top candidate: pass `1782`, min ratio `6.227`, IS profit `171,071.66`, IS DD `22.22%`, forward profit `104,161.05`, forward DD `16.73%`, parameters `g_MinClusterSize=3`, `g_ATR_Cluster_multiplier=0.2`, `g_ATR_StopLoss_multiplier=0.25`, `g_impulse_lookback_hours=48`, `g_pullback_lookforward_hours=24`, `g_Impulse_ATR_multiplier=0.8`, `g_MinPullback_ATR_multiplier=1.0`, `g_TakeProfitMultiplier=5`.
+- RUN2 top candidate: pass `4939`, min ratio `6.211`, IS profit `146,077.11`, IS DD `14.99%`, forward profit `73,902.26`, forward DD `11.90%`, parameters `g_MinClusterSize=3`, `g_ATR_Cluster_multiplier=0.2`, `g_ATR_StopLoss_multiplier=0.35`, `g_impulse_lookback_hours=48`, `g_pullback_lookforward_hours=18`, `g_Impulse_ATR_multiplier=1.0`, `g_MinPullback_ATR_multiplier=0.6`, `g_TakeProfitMultiplier=2`.
+- RUN3 top candidate: pass `696`, min ratio `7.932`, IS profit `202,237.81`, IS DD `14.57%`, forward profit `72,458.11`, forward DD `9.13%`, parameters `g_MinClusterSize=4`, `g_ATR_Cluster_multiplier=0.2`, `g_ATR_StopLoss_multiplier=0.4`, `g_impulse_lookback_hours=168`, `g_pullback_lookforward_hours=18`, `g_Impulse_ATR_multiplier=1.6`, `g_MinPullback_ATR_multiplier=0.4`, `g_TakeProfitMultiplier=3`.
+- Convergence finding: The runs did not converge to one exact parameter set, but they did converge on a broad region. All three top candidates used `g_ATR_Cluster_multiplier=0.2`, while the best stop-loss multipliers were wider than cluster size: `0.25`, `0.35`, and `0.4`.
+- Additional finding: Top-50 candidates across runs favored `g_ATR_StopLoss_multiplier` values mostly in the `0.25 -> 0.5` region. Very tight stop losses such as `0.05` and `0.10` did not appear in the top regions.
+- Decision or next step: The split appears meaningful. Do not treat optimizer-forward results as sufficient; set up fixed OOS tests for representative top candidates from RUN1, RUN2, and RUN3, then evaluate OOS and later cross-symbol behavior.
+
+### 2026-06-07 - Phase-1 Multi-Symbol Basket Decision
+
+- Goal: Lock the initial multi-symbol validation basket using non-performance criteria so later basket changes do not become implicit curve fitting.
+- Decision: Use `EURUSD`, `GBPUSD`, `USDJPY`, `EURJPY`, `XAUUSD`, `US500`, `US30`, and `US100` as the phase-1 fixed-manifold validation basket.
+- Decision: Do not add `USOIL` or `UKOIL` for phase-1. Oil is useful later but not important enough to change broker/workflow before the strategy proves basic cross-market robustness.
+- Special rule: `US100` is important enough to include, but OANDA history starts later than the standard `2000 -> 2026` workflow. Do not use `US100` for optimization or require the `2000 -> 2012` in-sample segment.
+- Test setup for `US100`: Skip in-sample, use validation from available history around `2014.09.15 -> 2018.01.01`, and use normal OOS testing from `2018.01.01 -> 2026.05.31`.
+- Decision or next step: Treat `US100` as a fixed-manifold validation symbol only. It can strengthen or weaken confidence in a manifold, but it must not be used to discover or tune parameters.
+
+### 2026-06-08 - Stop-Loss Split Strict Candidate OOS Checkpoint
+
+- Goal: Begin OOS review for all strict candidates from the three EURUSD D1 stop-loss split genetic optimizer-forward runs.
+- Source directory: `docs/results/results_for_run1_run2_run3`.
+- Test setup: EURUSD, `H1` tester timeframe, D1 high/low clustered signal logic, fixed single-test OOS runs, optimization disabled, `2018.01.01 -> 2026.05.31`.
+- Candidate source: strict optimizer-forward candidates from RUN1, RUN2, and RUN3, using profit `> 0`, profit/DD ratio `> 2.0`, equity DD `<= 30%`, in-sample trades `>= 200`, and forward trades `>= 100`.
+- OOS acceptance criteria used so far: profit `> 0`, profit/DD ratio `> 2.0`, and equity DD `<= 30%`.
+- OOS reports parsed: `374`.
+- OOS accepted candidates: `73` total, with `39` from RUN1, `24` from RUN2, and `10` from RUN3.
+- Failed report cleanup: deleted `301` failed report sets from `docs/results/results_for_run1_run2_run3`, removing `1,505` files including `.xml.htm` reports and sidecar chart images.
+- Audit files created: `docs/results/results_for_run1_run2_run3/accepted_oos_candidates.csv` and `docs/results/results_for_run1_run2_run3/deleted_failed_oos_candidates.csv`.
+- Best OOS candidate by current ratio ranking: RUN3 pass `1483`, profit `145,503.40`, equity DD `14.83%`, ratio `9.811`, trades `461`, parameters `g_MinClusterSize=2`, `g_ATR_Cluster_multiplier=0.1`, `g_ATR_StopLoss_multiplier=0.25`, `g_impulse_lookback_hours=120`, `g_pullback_lookforward_hours=6`, `g_Impulse_ATR_multiplier=0.4`, `g_MinPullback_ATR_multiplier=0.6`, `g_TakeProfitMultiplier=3`.
+- Analysis status: Not complete. The next session should continue reviewing the `73` accepted OOS candidates, including convergence/duplication, trade-count quality, secondary MT5 metrics such as recovery factor, profit factor, Sharpe, and whether candidates should be promoted to fixed multi-symbol validation.
+- Metric decision checkpoint: Keep explicit profit/DD as the primary acceptance filter for now because it directly measures return relative to equity drawdown. Use Sharpe, recovery factor, profit factor, and other MT5 report fields as secondary ranking or warning metrics, not replacements for profit/DD.
+
+### 2026-06-09 - Expanded Basket Reliability And Start-Date Probe
+
+- Goal: Confirm whether previously problematic or newly available symbols can be included in the fixed-manifold validation basket, and determine effective start coverage when requesting `2000.01.01 -> 2012.01.01` tests.
+- Source directories: `docs/results/test_on_prior_failing_symbols` and `docs/results/start_date_probe`.
+- Test setup: Fixed single-test backtests using `RUN2` pass `5456`, `H1` tester timeframe, D1 high/low clustered stop-loss split logic, optimization disabled, and CSV logging disabled.
+- Reliability outcome: `XAGUSD`, `US100`, `USOIL`, `UKOIL`, and `UK100` all completed fixed test runs and produced parseable MT5 `.xml.htm` reports.
+- Expanded phase-1 basket decision: use `EURUSD`, `GBPUSD`, `USDJPY`, `EURJPY`, `XAUUSD`, `XAGUSD`, `US500`, `US30`, `US100`, `UK100`, `USOIL`, and `UKOIL` for fixed-manifold validation and later FTMO-style portfolio analysis.
+- Start-date probe method: Requested `2000.01.01 -> 2012.01.01` for all `12` basket symbols, then parsed first EA trade/order timestamps with `docs/utils/Get-Mt5ReportFirstTradeDate.ps1`.
+- Full standard IS coverage by effective first trade/order: `USDJPY` first event `2000.01.03 15:00:00`, `GBPUSD` `2000.01.14 16:00:00`, `EURUSD` `2000.01.19 11:00:00`, and `EURJPY` `2000.01.25 07:00:00`.
+- Partial-history IS symbols: `US30` first event `2005.01.27 22:00:00`, `USOIL` `2005.01.27 21:00:00`, `US500` `2005.01.31 02:04:30`, `UKOIL` `2005.04.19 20:00:00`, `XAUUSD` `2006.04.13 17:00:00`, `XAGUSD` `2006.04.28 17:00:00`, and `UK100` `2008.06.03 21:00:00`.
+- `US100` result: The `2000 -> 2012` probe produced `0` trade/order events because the test ended before usable history. A follow-up `2000.01.01 -> 2020.01.01` probe produced first trade/order activity at `2014.10.07 15:00:00` with `1,364` trade/order events. Keep `US100` as validation/OOS-only from available history around `2014.09.15` onward.
+- Important limitation: Probe dates are first EA trade/order timestamps for one fixed manifold, not broker first-bar timestamps. They should be used as practical strategy workflow availability markers, not as exact historical data start dates.
+- Decision or next step: Treat non-FX symbols except `US100` as partial-history IS symbols rather than full `2000 -> 2012` symbols. Do not compare their IS results directly against full-history FX IS results without accounting for shorter coverage.
+
+### 2026-06-09 - Pre-CSV Expanded-Basket Elimination Filters
+
+- Goal: Freeze broad screening filters before running or analyzing the expanded fixed-manifold basket, so the basket is not used as an unrestricted leaderboard before FTMO trade CSV analysis.
+- Scope: Apply these filters after fixed MT5 reports are generated for the `12`-symbol basket and before generating trade CSV logs for FTMO rolling-challenge survivability analysis.
+- Completeness filter: Eliminate a manifold if any required report is missing or unparseable. `US100` IS is exempt because `US100` is validation/OOS-only.
+- Trade-count filters: Eliminate a manifold if total trades across all tested symbols and periods are `< 1500`, or validation plus OOS trades are `< 1000`, or OOS trades are `< 500`.
+- Aggregate performance filters: Eliminate a manifold if aggregate validation profit is `<= 0`, aggregate OOS profit is `<= 0`, aggregate validation profit/DD ratio is `< 1.5`, or aggregate OOS profit/DD ratio is `< 1.5`.
+- Catastrophic drawdown filter: Eliminate a manifold if any single symbol/period has equity DD `> 60%`.
+- Symbol coverage filter: Eliminate a manifold if fewer than `7 / 12` basket symbols are profitable in OOS.
+- Market group filter: Eliminate a manifold if OOS is negative in more than one whole market group. Market groups are FX, metals, indices, and energy.
+- Concentration filters: Eliminate a manifold if one symbol contributes more than `50%` of aggregate OOS profit, one market group contributes more than `70%` of aggregate OOS profit, or any single-symbol OOS loss consumes more than `30%` of aggregate OOS profit.
+- Stability filter: Eliminate a manifold if aggregate OOS profit/DD ratio is less than `40%` of aggregate validation profit/DD ratio.
+- Decision: These are broad elimination gates only. Do not pick the final manifold from these MT5 report metrics. Final ranking should be based on trade CSV FTMO survivability analysis, with average/resolved pass rate first and average/median pass time second.

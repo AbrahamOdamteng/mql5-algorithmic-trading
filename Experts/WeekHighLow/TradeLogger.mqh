@@ -55,7 +55,7 @@ bool OpenTradeCsv()
       Print("CSV opened successfully");
 
 
-   int ft = FileTell(g_TradeCsvHandle);
+   ulong ft = FileTell(g_TradeCsvHandle);
 
       Print("FileTell(g_TradeCsvHandle): ", ft);
 
@@ -67,11 +67,12 @@ bool OpenTradeCsv()
       FileWrite(
          g_TradeCsvHandle,
 
-         "symbol",
-         "ticket",
+          "symbol",
+          "ticket",
+          "trade_id",
 
-         "entry_type",
-         "direction",
+          "entry_type",
+          "direction",
 
          "deal_time",
          "day_of_week",
@@ -87,9 +88,11 @@ bool OpenTradeCsv()
          "impulse_lookback_hours",
          "pullback_lookforward_hours",
 
-         "impulse_atr_multiplier",
-         "min_pullback_atr_multiplier"
-      );
+          "impulse_atr_multiplier",
+          "min_pullback_atr_multiplier",
+
+          "risk_percentage"
+       );
 
       FileFlush(g_TradeCsvHandle);
    }
@@ -223,10 +226,15 @@ void OnTradeTransactionHelper(
          dealTicket,
          DEAL_ENTRY);
 
-   long dealType =
-      HistoryDealGetInteger(
-         dealTicket,
-         DEAL_TYPE);
+    long dealType =
+       HistoryDealGetInteger(
+          dealTicket,
+          DEAL_TYPE);
+
+    long tradeId =
+       HistoryDealGetInteger(
+          dealTicket,
+          DEAL_POSITION_ID);
 
    datetime dealTime =
       (datetime)HistoryDealGetInteger(
@@ -292,11 +300,12 @@ void OnTradeTransactionHelper(
    FileWrite(
       g_TradeCsvHandle,
 
-      _Symbol,
-      dealTicket,
+       _Symbol,
+       dealTicket,
+       tradeId,
 
-      entryType,
-      direction,
+       entryType,
+       direction,
 
       TimeToString(
          dealTime,
@@ -315,9 +324,11 @@ void OnTradeTransactionHelper(
       g_impulse_lookback_hours,
       g_pullback_lookforward_hours,
 
-      g_Impulse_ATR_multiplier,
-      g_MinPullback_ATR_multiplier
-   );
+       g_Impulse_ATR_multiplier,
+       g_MinPullback_ATR_multiplier,
+
+       g_Risk_Percentage
+    );
 
    FileFlush(g_TradeCsvHandle);
 }

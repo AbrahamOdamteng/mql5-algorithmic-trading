@@ -1,35 +1,29 @@
 $mt5 = "C:\Program Files\MetaTrader 5\terminal64.exe"
 $maxRuntimeMinutes = 10
+$clearTesterCacheBeforeEachRun = $false
 $testerCachePath = "C:\Users\abraham\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\Tester\cache\*"
 
-$configs = @(
-    "US100_D1StopLossSplit_RUN2_Pass5456_StartProbe_2000_2020.ini"
-)
+$configs = Get-ChildItem -LiteralPath $PSScriptRoot -Filter "EURUSD_D1StopLossSplit_RUN*_Pass*_OOS.ini" |
+    Sort-Object Name |
+    Select-Object -ExpandProperty Name
 
 $overallStartTime = Get-Date
 
 foreach ($config in $configs) {
-
     Write-Host ""
     Write-Host "====================================="
-    Write-Host "Running test for $config"
+    Write-Host "Running OOS test for $config"
     Write-Host "====================================="
 
-    Write-Host "Clearing tester cache"
-    Remove-Item `
-      $testerCachePath `
-      -Recurse -Force -ErrorAction SilentlyContinue
-
-    Start-Sleep -Seconds 5
+    if ($clearTesterCacheBeforeEachRun) {
+        Write-Host "Clearing tester cache"
+        Remove-Item $testerCachePath -Recurse -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 5
+    }
 
     $configPath = Join-Path $PSScriptRoot $config
-
     $startTime = Get-Date
-
-    $process = Start-Process `
-        -FilePath $mt5 `
-        -ArgumentList "/config:`"$configPath`"" `
-        -PassThru
+    $process = Start-Process -FilePath $mt5 -ArgumentList "/config:`"$configPath`"" -PassThru
 
     while (-not $process.HasExited) {
         Start-Sleep -Seconds 30
@@ -45,7 +39,6 @@ foreach ($config in $configs) {
 
     $endTime = Get-Date
     $duration = $endTime - $startTime
-
     Write-Host "Finished $config"
     Write-Host "Duration: $($duration.ToString())"
 }

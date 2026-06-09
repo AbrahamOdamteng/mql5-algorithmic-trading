@@ -121,15 +121,13 @@ That can delete unrelated user or indicator objects from the chart.
 
 Object deletion should ideally be scoped to this indicator's prefixes.
 
-### Trade Logger Is Inactive
+### Trade Logger Is Guarded By Input
 
-`TradeLogger.mqh` exists, but the EA comments out:
+`TradeLogger.mqh` exists and the EA now controls CSV logging with:
 
-- CSV delete/open in `OnInit()`.
-- CSV close in `OnDeinit()`.
-- `OnTradeTransaction()` forwarding to the logger helper.
+- `g_EnableTradeCsvLogging`
 
-The logger will not currently record trades.
+When enabled, the EA deletes and opens the CSV in `OnInit()`, forwards `OnTradeTransaction()` events to the logger helper, and closes the CSV in `OnDeinit()`. When disabled, the EA leaves the CSV logger inactive without requiring code comments to be changed.
 
 ## Lower Priority Cleanup
 

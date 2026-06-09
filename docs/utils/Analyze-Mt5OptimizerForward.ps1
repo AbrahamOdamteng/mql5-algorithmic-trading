@@ -111,6 +111,7 @@ foreach ($fr in $fwd) {
         HighLowPeriod       = Get-PropValue -Object $fr -Name 'g_HighLowPeriod'
         MinCluster          = [int](Get-PropValue -Object $fr -Name 'g_MinClusterSize')
         ClusterMult         = Get-PropValue -Object $fr -Name 'g_ATR_Cluster_multiplier'
+        StopLossMult        = Get-PropValue -Object $fr -Name 'g_ATR_StopLoss_multiplier'
         ImpulseLookback     = [int](Get-PropValue -Object $fr -Name 'g_impulse_lookback_hours')
         PullbackLookforward = [int](Get-PropValue -Object $fr -Name 'g_pullback_lookforward_hours')
         ImpulseMult         = Get-PropValue -Object $fr -Name 'g_Impulse_ATR_multiplier'
@@ -146,16 +147,16 @@ if ($Csv) {
 $ddcap |
     Sort-Object MinRatio -Descending |
     Select-Object -First $Top |
-    Format-Table -AutoSize Pass, MinRatio, ISProfit, ISDD, ISRatio, ISTrades, FwdProfit, FwdDD, FwdRatio, FwdTrades, FwdProfitFactor, MinCluster, ClusterMult, ImpulseLookback, PullbackLookforward, ImpulseMult, PullbackMult, TP
+    Format-Table -AutoSize Pass, MinRatio, ISProfit, ISDD, ISRatio, ISTrades, FwdProfit, FwdDD, FwdRatio, FwdTrades, FwdProfitFactor, MinCluster, ClusterMult, StopLossMult, ImpulseLookback, PullbackLookforward, ImpulseMult, PullbackMult, TP
 
 'STRICT_TRADE_CANDIDATES'
 $strict |
     Sort-Object MinRatio -Descending |
     Select-Object -First $Top |
-    Format-Table -AutoSize Pass, MinRatio, ISProfit, ISDD, ISRatio, ISTrades, FwdProfit, FwdDD, FwdRatio, FwdTrades, FwdProfitFactor, MinCluster, ClusterMult, ImpulseLookback, PullbackLookforward, ImpulseMult, PullbackMult, TP
+    Format-Table -AutoSize Pass, MinRatio, ISProfit, ISDD, ISRatio, ISTrades, FwdProfit, FwdDD, FwdRatio, FwdTrades, FwdProfitFactor, MinCluster, ClusterMult, StopLossMult, ImpulseLookback, PullbackLookforward, ImpulseMult, PullbackMult, TP
 
 'LOOSE_TRADE_CANDIDATES'
 $loose |
     Sort-Object MinRatio -Descending |
     Select-Object -First $Top |
-    Format-Table -AutoSize Pass, MinRatio, ISProfit, ISDD, ISRatio, ISTrades, FwdProfit, FwdDD, FwdRatio, FwdTrades, FwdProfitFactor, MinCluster, ClusterMult, ImpulseLookback, PullbackLookforward, ImpulseMult, PullbackMult, TP
+    Format-Table -AutoSize Pass, MinRatio, ISProfit, ISDD, ISRatio, ISTrades, FwdProfit, FwdDD, FwdRatio, FwdTrades, FwdProfitFactor, MinCluster, ClusterMult, StopLossMult, ImpulseLookback, PullbackLookforward, ImpulseMult, PullbackMult, TP
