@@ -33,6 +33,8 @@ input double  g_MinPullback_ATR_multiplier = 0.5;
 input int     g_TakeProfitMultiplier    = 2;
 input double  g_Risk_Percentage         = 1.0;
 input bool    g_EnableTradeCsvLogging   = true;
+input string  g_TradeCsvManifoldId      = "";
+input string  g_TradeCsvTestId          = "";
 
 
 

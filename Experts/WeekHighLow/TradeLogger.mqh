@@ -3,12 +3,37 @@
 #define TRADE_LOGGER
 
 int g_TradeCsvHandle = INVALID_HANDLE;
-// string g_filename = _Symbol + "_oanda_trades.csv";
-string g_filename =  "all_symbols_oanda_trades.csv";
+string g_filename = "manifold_trades_default.csv";
+
+string SanitizeTradeCsvToken(string value)
+{
+   if(StringLen(value) == 0)
+      return "default";
+
+   string result = value;
+   StringReplace(result, "\\", "_");
+   StringReplace(result, "/", "_");
+   StringReplace(result, ":", "_");
+   StringReplace(result, "*", "_");
+   StringReplace(result, "?", "_");
+   StringReplace(result, "\"", "_");
+   StringReplace(result, "<", "_");
+   StringReplace(result, ">", "_");
+   StringReplace(result, "|", "_");
+   StringReplace(result, " ", "_");
+
+   return result;
+}
+
+void ConfigureTradeCsvFileName()
+{
+   g_filename = "manifold_trades_" + SanitizeTradeCsvToken(g_TradeCsvManifoldId) + ".csv";
+}
 
 
 void DeleteTradeCsv()
 {
+   ConfigureTradeCsvFileName();
 
    bool exists =
       FileIsExist(g_filename, FILE_COMMON);
@@ -34,6 +59,7 @@ void DeleteTradeCsv()
 
 bool OpenTradeCsv()
 {
+   ConfigureTradeCsvFileName();
 
    g_TradeCsvHandle = FileOpen(
       g_filename,
@@ -49,10 +75,8 @@ bool OpenTradeCsv()
       return false;
    }
 
-   Print("CSV opened successfully");
-
    FileSeek(g_TradeCsvHandle, 0, SEEK_END);
-      Print("CSV opened successfully");
+   Print("CSV opened successfully: ", g_filename);
 
 
    ulong ft = FileTell(g_TradeCsvHandle);
@@ -66,6 +90,9 @@ bool OpenTradeCsv()
 
       FileWrite(
          g_TradeCsvHandle,
+
+          "manifold_id",
+          "test_id",
 
           "symbol",
           "ticket",
@@ -158,6 +185,9 @@ void SaveClosedTradeToCsv(
 
    FileWrite(
       g_TradeCsvHandle,
+
+      g_TradeCsvManifoldId,
+      g_TradeCsvTestId,
 
       _Symbol,
       dealTicket,
@@ -299,6 +329,9 @@ void OnTradeTransactionHelper(
 
    FileWrite(
       g_TradeCsvHandle,
+
+       g_TradeCsvManifoldId,
+       g_TradeCsvTestId,
 
        _Symbol,
        dealTicket,

@@ -318,3 +318,127 @@ Each entry should include:
 - Concentration filters: Eliminate a manifold if one symbol contributes more than `50%` of aggregate OOS profit, one market group contributes more than `70%` of aggregate OOS profit, or any single-symbol OOS loss consumes more than `30%` of aggregate OOS profit.
 - Stability filter: Eliminate a manifold if aggregate OOS profit/DD ratio is less than `40%` of aggregate validation profit/DD ratio.
 - Decision: These are broad elimination gates only. Do not pick the final manifold from these MT5 report metrics. Final ranking should be based on trade CSV FTMO survivability analysis, with average/resolved pass rate first and average/median pass time second.
+
+### 2026-06-10 - FTMO-First Evaluation Plan From Expanded-Basket Checkpoint
+
+- Goal: Reframe the expanded-basket analysis around the actual FTMO objective instead of relying too heavily on full-period MT5 report drawdown.
+- Current run status: The expanded-basket restartable runner is still in progress and should continue overnight and into tomorrow in case an untested manifold performs materially better.
+- Preliminary observation: Early report-level screening showed severe failures on several symbols, especially `USOIL`, with additional drag from `EURJPY`, `UKOIL`, `USDJPY`, `US500`, and `US30` depending on the reduced basket used.
+- Important interpretation: Full-period MT5 max drawdown is not the same as FTMO first-passage success. A strategy may hit the `+10%` target before a later full-period drawdown occurs, so report-level DD can be too indirect for the final FTMO decision.
+- FTMO objective: Evaluate whether a simulated account reaches `+10%` before `-10%`, while also checking the daily loss rule.
+- Planned code change: Modify `TradeLogger.mqh` and EA inputs so trade CSV rows include manifold/test identity, likely `g_TradeCsvManifoldId` and `g_TradeCsvTestId`.
+- Planned file behavior: Write one appendable CSV per manifold, creating a new file for a new manifold and appending for existing manifold tests. This avoids depending on the order in which MT5 executes individual symbol/segment tests.
+- Planned analysis behavior: Sort manifold CSV rows by `deal_time`, dedupe rerun rows with a stable key such as `manifold_id + test_id + symbol + ticket + trade_id + entry_type + deal_time`, then run rolling FTMO first-passage simulations.
+- Ranking metrics: Pass rate is primary, median pass duration is secondary, and average pass duration is tertiary. Unresolved starts should be reported separately.
+- Provisional grading: `A` requires pass rate `>= 80%`, median pass duration `<= 60` days, and average pass duration `<= 90` days. `B` requires pass rate `>= 70%`, median `<= 90` days, and average `<= 120` days. `C` requires pass rate `>= 60%`, median `<= 120` days, and average `<= 180` days.
+- Decision or next step: Use `B` as the provisional minimum acceptable FTMO grade. Implement the manifold-aware CSV logging and rolling FTMO path analysis after the current overnight expanded-basket run completes or is stopped.
+
+### 2026-06-11 - Expanded-Basket Fixed Report Review Complete
+
+- Goal: Analyze the completed expanded-basket fixed MT5 report batch for all `73` selected stop-loss-split candidate manifolds across the `12`-symbol basket.
+- Source files: `reports/expanded_basket/*.xml.htm`, generated from `Files/WeekHighLow/expanded_basket_manifest.csv` by the restartable expanded-basket runner.
+- Test coverage: `2,555` manifest tests, `2,555` reports parsed, `73` complete manifolds, and `0` partial/missing manifolds.
+- Full-basket result: `0` manifolds survived the frozen pre-CSV report-level filters.
+- Full-basket gate counts: `34 / 73` manifolds had positive aggregate validation profit, `44 / 73` had positive aggregate OOS profit, `0 / 73` had validation ratio `>= 1.5`, `0 / 73` had OOS ratio `>= 1.5`, `2 / 73` had max single-report DD `<= 60%`, and `73 / 73` passed the broad trade-count gates.
+- Main full-basket failure modes: `USOIL` was catastrophic in validation and OOS, with `0 / 73` profitable reports in both `USOIL VAL` and `USOIL OOS`. `UKOIL VAL/OOS`, `EURJPY IS/OOS`, `USDJPY IS`, `US500 IS/VAL`, and `GBPUSD IS` were also major drags.
+- Strong full-basket areas: `EURUSD` and `XAUUSD` were strong across IS/VAL/OOS. `XAGUSD` was generally useful. `USDJPY VAL/OOS`, `US500 OOS`, `USOIL IS`, and `UKOIL IS` were strong in isolated periods but did not generalize across their full symbol/period workflows.
+- Reduced-basket result: Removing only `USOIL`, or removing `USOIL`, `EURJPY`, `UKOIL`, and `USDJPY`, still produced `0` report-level survivors.
+- Reduced-basket result: Removing oil, `EURJPY`, `USDJPY`, `US500`, and `US30` still produced `0` report-level survivors across the remaining `EURUSD`, `GBPUSD`, `XAUUSD`, `XAGUSD`, `US100`, and `UK100` basket.
+- Core four-symbol result: On `EURUSD`, `GBPUSD`, `XAUUSD`, and `XAGUSD`, some manifolds passed the base report-level criteria, but `0` survived the full concentration filters. This core is useful as an FTMO replay shortlist, not as a clean broad-market deployment result.
+- Best core candidates: `RUN1_Pass1991` had validation ratio `3.277`, OOS ratio `2.215`, max DD `38.60%`, and `3 / 4` OOS-positive symbols. `RUN1_Pass2794` and `RUN1_Pass3059` each had validation ratio `2.804`, OOS ratio `1.901`, max DD `40.95%`, and `4 / 4` OOS-positive symbols. `RUN2_Pass5578` had validation ratio `2.784`, OOS ratio `1.610`, max DD `33.72%`, and `3 / 4` OOS-positive symbols. `RUN2_Pass5191` had validation ratio `1.858`, OOS ratio `1.503`, max DD `51.21%`, and `3 / 4` OOS-positive symbols.
+- Core candidate parameter region: all shortlisted core candidates used `g_MinClusterSize=4`, `g_TakeProfitMultiplier=1`, `g_MinPullback_ATR_multiplier=0.8`, cluster multiplier mostly `0.5`, stop-loss multiplier `0.4 -> 0.5`, impulse lookback `72 -> 144`, pullback lookforward `18 -> 24`, and impulse multiplier `0.6 -> 0.8`.
+- FTMO interpretation: Report-level filters are useful for stress testing, but full-period MT5 DD and aggregate report ratios remain indirect for FTMO. Final evaluation should use manifold-aware trade CSV files and rolling first-passage simulation.
+- FTMO grading update: Because FTMO has both challenge and verification stages, single-stage pass rate compounds over two target-reaching stages. A `70%` single-stage rate implies only about `49%` two-stage success, while `80%` implies `64%` and `85%` implies `72.25%`. Funded-stage payout does not require another `+10%` target, so funded survival should be evaluated separately rather than as a third identical first-passage stage.
+- Revised provisional FTMO target: Use evaluation pass rate `>= 80%` as the minimum viable target, `>= 85%` as preferred, with median pass duration ideally `<= 90` days and average pass duration ideally `<= 120` days. Funded mode should likely use lower risk than evaluation mode and focus on avoiding breach while remaining profitable.
+- Decision or next step: Do not promote any `12`-symbol manifold from this batch as robust. Implement manifold-aware CSV logging and rolling FTMO first-passage analysis next, starting with the core shortlist `RUN1_Pass2794`, `RUN1_Pass3059`, `RUN1_Pass1991`, `RUN2_Pass5578`, and `RUN2_Pass5191`.
+
+### 2026-06-11 - Manifold-Aware Trade CSV Logging Implemented
+
+- Goal: Make MT5 fixed-test trade logs suitable for FTMO first-passage analysis by grouping trade events by manifold instead of relying on report execution order.
+- Change: Added EA inputs `g_TradeCsvManifoldId` and `g_TradeCsvTestId` to `Experts/WeekHighLow/WeekHighLowEA.mq5`.
+- Change: Updated `Experts/WeekHighLow/TradeLogger.mqh` to write `manifold_id` and `test_id` columns and to write one common-files CSV per manifold using `manifold_trades_<manifold_id>.csv`.
+- Change: Updated `Files/WeekHighLow/New-ExpandedBasketBatch.ps1` so newly generated expanded-basket presets include the CSV identity inputs with logging disabled by default.
+- Change: Updated `Files/WeekHighLow/Run-ExpandedBasketRestartable.ps1` with `-EnableTradeCsvLogging`, which creates a temporary per-test preset that enables logging and injects the current `ManifoldId` and `TestId`.
+- Change: Added `-RunExistingReports` to the restartable runner so completed report tests can be rerun intentionally for CSV generation without being skipped by existing reports/progress.
+- Change: Added `-ManifoldId` and `-Symbol` filters to the restartable runner so CSV replay can target shortlisted manifolds and core symbols without rerunning the full expanded basket.
+- Verification: PowerShell parser checks passed for `Run-ExpandedBasketRestartable.ps1` and `New-ExpandedBasketBatch.ps1`.
+- Verification: Compiled `Experts/WeekHighLow/WeekHighLowEA.mq5` with MetaEditor64. Result was `0` errors and `0` warnings.
+- Cleanup decision: The generated fixed report artifacts in terminal-data `reports/expanded_basket` are no longer needed for durable analysis and may be deleted. Preserve candidate CSVs, manifest/progress CSVs, expanded-basket `.set` files, and any generated `manifold_trades_*.csv` files.
+- Decision or next step: Use the new runner switches to regenerate trade CSVs for shortlisted core manifolds `RUN1_Pass2794`, `RUN1_Pass3059`, `RUN1_Pass1991`, `RUN2_Pass5578`, and `RUN2_Pass5191` on `EURUSD`, `GBPUSD`, `XAUUSD`, and `XAGUSD`, then implement or run rolling FTMO first-passage analysis on the resulting `manifold_trades_*.csv` files.
+
+### 2026-06-11 - Core Manifold FTMO Closed-PnL Replay
+
+- Goal: Evaluate shortlisted core manifolds using rolling FTMO-style first-passage analysis rather than full-period MT5 report metrics.
+- Source files: `manifold_trades_RUN1_Pass2794.csv`, `manifold_trades_RUN1_Pass3059.csv`, `manifold_trades_RUN1_Pass1991.csv`, `manifold_trades_RUN2_Pass5578.csv`, and `manifold_trades_RUN2_Pass5191.csv` in the MT5 common files area.
+- Scope: Core symbols only: `EURUSD`, `GBPUSD`, `XAUUSD`, and `XAGUSD`.
+- Method: Start a replay from every closed trade event, sort all trade events by `deal_time`, and stop each simulation when the account hits `+10%`, `-10%`, a `5%` daily-loss proxy, or end of data.
+- Important limitation: Daily loss is calculated from closed P/L only. The CSV does not contain floating equity, so true intratrade daily loss breaches may be missed.
+- CSV health: All five manifold CSVs parsed successfully. No malformed `manifold_id` / `test_id` rows remained after fixing string-input `.set` formatting. No duplicate rows were removed.
+- Baseline result without entry-hour filtering: `0.25%` risk produced high pass rates but very long duration. `RUN1_Pass1991 @ 0.25%` had pass rate `93.35%` with median pass duration `919.83` days. `RUN2_Pass5191 @ 0.25%` had pass rate `91.51%` with median `552.94` days.
+- Baseline result without entry-hour filtering: `RUN2_Pass5191` was the best practical unfiltered candidate. At `0.35%`, pass rate was `85.30%` with median `367.85` days. At `0.40%`, pass rate was `80.16%` with median `294.68` days. At `0.45%`, pass rate was `75.88%` with median `233.02` days.
+- Hypothesis tested: Filter entries to the active session by keeping trades whose entry event hour is between `08` and `17` inclusive, while retaining the matching exit event regardless of exit hour.
+- Entry-hour filter result: The `08 -> 17` entry filter materially improved pass rates but generally increased pass duration at comparable risk.
+- Best `80%+` filtered candidates: `RUN2_Pass5191 @ 0.60%` had pass rate `80.65%`, median `213.75` days, average `294.68` days, `24` daily-loss-proxy failures, and `641` global-loss failures. `RUN1_Pass1991 @ 0.80%` had pass rate `80.63%`, median `219.48` days, average `286.62` days, `0` daily-loss-proxy failures, and `447` global-loss failures.
+- Stronger reliability filtered candidates: `RUN2_Pass5191 @ 0.55%` had pass rate `83.67%`, median `243.08` days, average `336.97` days, and `0` daily-loss-proxy failures. `RUN1_Pass1991 @ 0.70%` had pass rate `84.68%`, median `283.68` days, average `362.80` days, and `0` daily-loss-proxy failures.
+- Faster but lower-pass-rate filtered candidates: `RUN1_Pass1991 @ 1.00%` had pass rate `75.56%`, median `150.35` days, average `184.99` days, and `35` daily-loss-proxy failures. `RUN1_Pass1991 @ 1.20%` had pass rate `71.38%`, median `98.96` days, average `133.75` days, and `118` daily-loss-proxy failures.
+- High-risk sweep conclusion: Risk above `1.0%` reduces pass duration but drops pass rate below the `80%` target and materially increases daily-loss-proxy failures. The best high-risk manifold remains `RUN1_Pass1991`, especially around `1.1% -> 1.2%`, but this is below the preferred reliability threshold.
+- Current best balance: `RUN1_Pass1991 @ 0.80%` with the `08 -> 17` entry filter is the best balanced candidate so far because it stays near the `80%` pass-rate threshold, has median pass duration near `220` days, average near `287` days, and has `0` closed-PnL daily-loss-proxy failures.
+- Current safer candidate: `RUN1_Pass1991 @ 0.70%` with the `08 -> 17` entry filter has pass rate `84.68%`, median `283.68` days, and `0` daily-loss-proxy failures.
+- Current aggressive candidate: `RUN1_Pass1991 @ 0.90%` with the `08 -> 17` entry filter has pass rate `77.38%`, median `178.98` days, average `223.14` days, and `0` daily-loss-proxy failures, but falls below the `80%` target.
+- Decision or next step: Treat the `08 -> 17` entry-hour filter as promising. Next useful analysis is to test adjacent session windows and/or symbol-level contribution for `RUN1_Pass1991`, especially around `0.70% -> 0.90%` communal risk.
+
+### 2026-06-12 - Symbol-Specific Behavior Cluster Research Direction
+
+- Goal: Reframe the next robustness search around FTMO challenge plus verification completion speed while preserving the existing fixed-manifold workflow.
+- Decision: Keep the previous global fixed-manifold approach documented, but add a parallel research direction where each symbol can earn inclusion by showing multiple profitable and behaviorally distinct parameter families.
+- New robustness definition under consideration: A symbol is stronger if it has several validation-profitable behavior clusters, not merely one best manifold. A portfolio unit is `symbol + behavior cluster representative` rather than just `symbol` or one global manifold.
+- Proposed selection rule: Choose one random or median representative from each accepted behavior cluster, not the historical best member by default. This avoids leaderboard selection and avoids running multiple clones from the same behavior cluster.
+- Proposed behavior distinctness metrics: Use `OverlapCoverage = MatchedTrades / min(TradeCountA, TradeCountB)` and `JaccardOverlap = MatchedTrades / (TradeCountA + TradeCountB - MatchedTrades)` after matching trades by symbol, direction, entry-time tolerance, and possibly price tolerance.
+- Initial cluster thresholds: Treat candidates as separate behavior clusters when `OverlapCoverage < 60%` and `JaccardOverlap < 40%`. Use stricter thresholds such as `OverlapCoverage < 40%` and `JaccardOverlap < 25%` if portfolio independence needs to be higher.
+- Proposed symbol classification: `0` clusters rejects a symbol, `1` cluster makes it a specialist, `2` clusters makes it a support/minimum-robust symbol, and `3+` clusters makes it a core symbol.
+- FTMO objective update: The desired evaluation target is passing challenge `+10%` plus verification `+5%` in under `90` calendar days before daily/global breach. Funded mode should be evaluated separately with lower risk and a steady `1% -> 3%` monthly profit objective on aggregated funded capital.
+- Decision or next step: Implement or extend utilities for parameter clustering, trade-overlap clustering, representative selection, and portfolio FTMO replay over selected `symbol + behavior cluster` units.
+
+### 2026-06-14 - FTMO Goal Realignment
+
+- Goal: Realign the project objective around the user's intended FTMO business model rather than treating one strategy as responsible for both challenge passing and funded-account operation.
+- Decision: Separate evaluation/challenge mode from funded mode. The challenge strategy may be different from the funded strategy.
+- Challenge-mode objective: Use aggressive account-acquisition logic if needed, targeting FTMO `+10%` first-passage before daily/global breach. Preferred pass speed is roughly `20 -> 30` trading days, with `40` trading days treated as the current upper acceptable limit. Calendar days should still be reported because account operations are calendar-based, but weekend market closures mean trading days are the cleaner opportunity measure.
+- Challenge-fee economics: A high challenge-failure rate may be acceptable if expected challenge-fee cost per successfully funded account is reasonable. Example framing discussed: a `100K` challenge costing about `GBP 500`; failing `9` attempts and passing on the `10th` costs about `GBP 5,000` in challenge fees for one funded account.
+- Funded-mode objective: After funded status, do not continue optimizing for fast `+10%` gains. Use lower-risk operation targeting roughly `1% -> 3%` monthly, with the intention to scale funded capital across additional accounts toward about `1,000,000` total funded capital.
+- Analysis implication: Challenge-mode analysis should rank candidates by pass-before-breach probability, pass speed within `40` trading days, expected challenge-fee cost per pass, daily/global breach frequency, and losing-streak distribution. Funded-mode analysis should separately report monthly return distribution, breach probability, payout survival, and survival over `3`, `6`, and `12` months.
+- Decision or next step: Preserve the old fixed-manifold and behavior-cluster robustness workflows, but evaluate their candidates separately for challenge mode and funded mode instead of assuming one manifold must satisfy both objectives.
+
+### 2026-06-15 - Funded Symbol-Specific Pivot And USDJPY Validation
+
+- Goal: Continue funded-mode research after the EURUSD-derived fixed-global manifold failed to validate as a `6 -> 12` symbol portfolio.
+- Corrected cross-symbol finding: Including IS performance materially weakened the previous EURUSD-derived cross-symbol interpretation. For the reviewed EURUSD-derived funded passes, only `EURUSD` was accepted across `IS + VAL + OOS`; no candidate passed as a credible multi-symbol fixed funded manifold.
+- Decision: Abandon the assumption that one EURUSD-derived parameter manifold should work across `6 -> 12` symbols. Do not abandon the high/low strategy yet; pivot to symbol-specific or cluster-specific funded validation.
+- Funded portfolio target update: Treat `EURUSD + 2 -> 4` independently validated symbols as the practical target. Minimum viable funded portfolio is `2 -> 3` robust symbols; good target is `4 -> 5`; stretch target is `6`.
+- XAUUSD setup: Created `Profiles/Tester/ImpulseContinuation_XAUUSD_Funded_Genetic.set` and `Files/WeekHighLow/XAUUSD_Funded_Genetic.ini` for a gold-specific funded genetic run over `2000.01.01 -> 2018.01.01` with real ticks.
+- XAUUSD outcome: OANDA tester reported `XAUUSD: ticks data begins from 2025.01.02 00:00`, matching the earlier metals tick-history limitation seen on `XAGUSD`. Metals are paused on this OANDA data feed unless using another model/feed or accepting non-real-tick testing.
+- USDJPY setup: Created `Profiles/Tester/ImpulseContinuation_USDJPY_Funded_Genetic.set` and `Files/WeekHighLow/USDJPY_Funded_Genetic.ini` for a USDJPY-specific funded genetic run over `2000.01.01 -> 2018.01.01` with optimizer forward validation.
+- USDJPY genetic source files: `reports/USDJPY_D1StopLossSplit_Funded_Genetic_2000_2018_FWD_20260615.xml` and `.forward.xml`.
+- USDJPY genetic outcome: `4,746` paired rows, `2,912` positive IS+forward pairs, `1,475` ratio-qualified pairs, `1,454` after drawdown cap, `103` strict candidates, and `1,292` loose candidates.
+- USDJPY OOS setup: Created fixed OOS presets/configs for passes `3363`, `3401`, `2650`, `3563`, `1583`, `2185`, `1811`, and `2402`, plus `Files/WeekHighLow/Run-USDJPY-FundedOos.ps1`.
+- USDJPY OOS report location: `reports/usdjpy_funded_oos`. The OOS configs were updated to write into this dedicated folder instead of the shared `reports` root.
+- USDJPY OOS test setup: Fixed single-test runs, optimization disabled, `2018.01.01 -> 2026.06.01`, funded acceptance criteria of profit `> 0`, profit/DD ratio `> 2.0`, and equity DD `<= 30%`.
+- USDJPY OOS outcome: `8` reports parsed, `7` profitable, `3` ratio-qualified, `6` under DD cap, and `3` accepted.
+- USDJPY accepted OOS candidates: pass `1811` had OOS profit `61,547.28`, DD `13.16%`, ratio `4.677`, `157` trades, PF `1.38`; pass `2402` had OOS profit `52,548.93`, DD `15.02%`, ratio `3.499`, `195` trades, PF `1.25`; pass `3363` had OOS profit `66,346.10`, DD `22.49%`, ratio `2.950`, `132` trades, PF `1.45`.
+- USDJPY best candidate: pass `1811`, because it had the strongest OOS ratio and also passed IS and forward cleanly: IS ratio `7.90` with DD `14.56%`, forward ratio `6.04` with DD `12.67%`, and OOS ratio `4.677` with DD `13.16%`.
+- USDJPY expanded OOS follow-up: Because the genetic run produced many candidates and OOS tests were quick, added `Files/WeekHighLow/Run-USDJPY-FundedTop20Oos.ps1` to test the top `20` optimizer-forward candidates by funded ratio, skipping existing reports in `reports/usdjpy_funded_oos` by default.
+- Runner fix: Corrected the OOS runner process-wait logic in `Run-EURUSD-FundedOos.ps1`, `Run-USDJPY-FundedOos.ps1`, and `Run-USDJPY-FundedTop20Oos.ps1`. The previous `Wait-Process` usage mislabeled completed MT5 runs as `TimedOut`; the scripts now use `$process.WaitForExit(...)`.
+- USDJPY expanded OOS result: The folder contained `26` total USDJPY OOS reports after the top-20 follow-up, including the original `8`-candidate shortlist plus the expanded top-20 set. Across all `26`, `14` were profitable and `4` were accepted. Within the top-20 subset, `20` reports were parsed, `8` were profitable, and `2` were accepted.
+- USDJPY additional accepted candidate: pass `2698` was newly accepted from the expanded top-20 follow-up, with OOS profit `53,065.45`, DD `19.47%`, ratio `2.725`, `138` trades, and PF `1.45`. It also passed IS and forward: IS ratio `7.30`, DD `12.41%`, `210` trades; forward ratio `8.96`, DD `10.28%`, `97` trades.
+- USDJPY accepted set after expansion: passes `1811`, `2402`, `3363`, and `2698` all passed the full `IS + forward + OOS` funded screen. Pass `1811` remains the lead candidate; the expanded top-20 run strengthened USDJPY confidence but did not change the best pass.
+- Current funded status: `EURUSD` is provisionally validated; `USDJPY` is provisionally validated. Both still need later robustness checks such as shifted walk-forward windows, parameter-neighborhood stability, cost stress, monthly return distribution, and Monte Carlo/trade-skip stress.
+- Decision or next step: Need at least one more robust symbol for a minimum viable funded portfolio, preferably `2 -> 3` more. Since OANDA real-tick metals are blocked historically, next FX candidate should be `GBPUSD`, followed by `EURJPY` only if GBPUSD is weak or inconclusive.
+
+### 2026-06-18 - EURUSD-Generated Cross-Symbol Promotion Workflow
+
+- Goal: Update the funded research workflow after reviewing the latest experiment direction.
+- Decision: Use the EURUSD genetic backtest as the candidate generator rather than independently discovering each symbol first.
+- Workflow: Select top `N` EURUSD genetic candidates, run those candidates across all target symbols in in-sample plus validation, define `S*` as the successful cross-symbol subset, run only `S*` in OOS, and keep `S^`, the subset of `S*` that also passes OOS.
+- Trade-count decision: Do not eliminate individual candidates only because their trade count is below `100`. Low-trade candidates can remain if they contribute to a useful final subset.
+- Portfolio-frequency rule: Evaluate trade frequency using the aggregate trade count of `S^`, not a per-candidate minimum-trade rule.
+- Decision or next step: Apply this workflow to the newly available results from yesterday's experiment, then judge whether `S^` has enough aggregate trade count and portfolio quality for the next funded/FTMO analysis step.
