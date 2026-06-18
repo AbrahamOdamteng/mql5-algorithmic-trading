@@ -51,11 +51,16 @@ These are the decisions that should be clarified before larger refactors or stra
 5. Current trade-count rule: do not eliminate individual candidates only because they have fewer than `100` trades. Evaluate trade count using the aggregate trade count of `S^`, the final OOS-passing subset.
 6. Current phase-1 basket decision: use `EURUSD`, `GBPUSD`, `USDJPY`, `EURJPY`, `XAUUSD`, `XAGUSD`, `US500`, `US30`, `US100`, `UK100`, `USOIL`, and `UKOIL`. Only the FX symbols showed effective full `2000 -> 2012` start coverage in the start-date probe. Treat `US30`, `US500`, `UK100`, `XAUUSD`, `XAGUSD`, `USOIL`, and `UKOIL` as partial-history IS symbols. Treat `US100` as validation/OOS-only from available history and do not use it for optimization.
 7. What per-symbol loss or drawdown cap should be used so one symbol cannot dominate portfolio risk?
-8. For FTMO evaluation, should report-level max drawdown remain only a coarse sanity filter while final ranking comes from rolling challenge simulations?
-9. Provisional FTMO grading decision: rank by pass rate first, median pass duration second, and average pass duration third. Minimum viable evaluation pass rate is currently `>= 80%`, with `>= 85%` preferred because challenge and verification pass rates compound. Funded-stage payout should be evaluated as survival/profitability rather than another `+10%` first-passage target.
-10. Goal realignment set on `2026-06-14`: evaluation/challenge mode and funded mode may use different strategies. Challenge mode should be treated as account acquisition, targeting `+10%` before breach, preferably in `20 -> 30` trading days and with `40` trading days as the current upper acceptable limit. Funded mode should target lower-risk `1% -> 3%` monthly extraction and account survival.
-11. Challenge-mode analysis should report expected challenge-fee cost per funded account and losing-streak distribution, because a high challenge-failure rate may be acceptable if the funded-mode economics remain positive.
-12. Funded-mode analysis should report monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months instead of using fast `+10%` pass speed.
+8. How large must `S^` be before it is considered more than a lucky survivor set: at least `2`, `3`, or more independent candidates?
+9. What concentration cap should be used so one symbol cannot dominate `S^` aggregate profit, trade count, or drawdown?
+10. What concentration cap should be used so one candidate cannot dominate `S^` aggregate profit, trade count, or drawdown?
+11. How should EURUSD-source selection bias be measured after cross-symbol `IS + VAL` and OOS filtering?
+12. For FTMO evaluation, should report-level max drawdown remain only a coarse sanity filter while final ranking comes from rolling challenge simulations?
+13. Provisional FTMO grading decision: rank by pass rate first, median pass duration second, and average pass duration third. Minimum viable evaluation pass rate is currently `>= 80%`, with `>= 85%` preferred because challenge and verification pass rates compound. Funded-stage payout should be evaluated as survival/profitability rather than another `+10%` first-passage target.
+14. Goal realignment set on `2026-06-14`: evaluation/challenge mode and funded mode may use different strategies. Challenge mode should be treated as account acquisition, targeting `+10%` before breach, preferably in `20 -> 30` trading days and with `40` trading days as the current upper acceptable limit. Funded mode should target lower-risk `1% -> 3%` monthly extraction and account survival.
+15. Challenge-mode analysis should report expected challenge-fee cost per funded account and losing-streak distribution, because a high challenge-failure rate may be acceptable if the funded-mode economics remain positive.
+16. Funded-mode analysis should report monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months instead of using fast `+10%` pass speed.
+17. Promising `S^` portfolios should be stress-tested with cost/spread assumptions, trade-skip or Monte Carlo perturbations, and shifted windows before being treated as robust.
 
 ## Behavior Cluster Research
 

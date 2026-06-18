@@ -44,6 +44,18 @@ Current cross-symbol candidate-promotion workflow:
 
 Low trade count on one candidate should not automatically reject it. Do not eliminate individual candidates only because they have fewer than `100` trades. Evaluate trade frequency using the aggregate trade count of the final OOS-passing subset `S^`.
 
+Current main uncertainty: EURUSD-generated manifolds may not represent transferable cross-symbol behavior. The `S*` -> `S^` workflow is a cleaner promotion gate, but it can still produce lucky survivors if EURUSD-specific candidates happen to pass a limited cross-symbol screen.
+
+Validation safeguards for `S^`:
+
+- Prefer `S^` to contain multiple surviving candidates, not just one standout manifold.
+- Check whether profit and drawdown quality are spread across several symbols instead of being dominated by one symbol.
+- Check whether one candidate contributes too much of the aggregate return or too much of the aggregate drawdown.
+- Treat enough aggregate trades as necessary but not sufficient; the trades must also be distributed across symbols and candidates.
+- Do not treat full-period OOS report profitability as equivalent to FTMO challenge passability. Challenge mode must be judged with rolling first-passage analysis: target before daily/global breach and within the desired time window.
+- For funded mode, judge monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months. Full-period OOS profit alone is not enough.
+- Stress promising `S^` portfolios with cost/spread assumptions, trade-skip or Monte Carlo tests, and shifted windows before treating them as robust.
+
 ## Test Plan
 
 - `2000 -> 2012`: In-sample period, tested by the MT5 optimizer.
@@ -143,6 +155,7 @@ Immediate next workflow:
 - Run cross-symbol in-sample plus validation first, then form `S*` from successful candidates.
 - Run OOS only for `S*`, then form `S^` from OOS-passing candidates.
 - Evaluate aggregate trade count and portfolio suitability on `S^`, not by applying a per-candidate `< 100` trade elimination rule.
+- Audit `S^` for survivor-luck risk, symbol concentration, candidate concentration, and path-dependent FTMO/funded performance before promotion.
 
 Provisional FTMO grading:
 
