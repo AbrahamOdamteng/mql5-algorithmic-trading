@@ -158,7 +158,7 @@ Required analysis capabilities:
 - Report `OverlapCoverage`, `JaccardOverlap`, and `TradeDistance` for candidate pairs.
 - Assign candidates into behavior clusters so clone-like parameter sets are not counted as independent strategy units.
 - Select random or median representatives from accepted behavior clusters.
-- Replay portfolios built from `symbol + behavior cluster` units against challenge `+10%`, verification `+5%`, daily loss, global loss, and the under-`90`-day target.
+- Replay portfolios built from `symbol + behavior cluster` units against challenge `+10%`, verification `+5%`, daily loss, global loss, pass-rate-first grading, and consistency diagnostics.
 
 ## Notes
 

@@ -15,21 +15,21 @@ The alternative robustness question is:
 
 ## FTMO Objective
 
-The practical target is to pass both challenge and verification in less than `90` calendar days.
+The current challenge-stage target is pass-rate-first rather than speed-first. See `ftmo-challenge-requirements.md` for the canonical requirements.
 
-Goal realignment set on `2026-06-14`: challenge/evaluation mode and funded mode may use different strategies. Challenge mode should be treated as an account-acquisition engine, targeting FTMO `+10%` before daily/global breach, preferably in roughly `20 -> 30` trading days and with `40` trading days as the current upper acceptable limit. Funded mode should be evaluated separately at lower risk, targeting steady `1% -> 3%` monthly extraction and account survival rather than another fast `+10%` first-passage target.
+Goal realignment set on `2026-06-14` and refined on `2026-06-21`: challenge/evaluation mode and funded mode may use different strategies. Challenge mode should be treated as an account-acquisition engine, targeting FTMO `+10%` before daily/global breach with single-stage pass rate prioritized over raw pass speed. Funded mode should be evaluated separately at lower risk, targeting steady `1% -> 3%` monthly extraction and account survival rather than another fast `+10%` first-passage target.
 
 For FTMO-style evaluation, the relevant first-passage objective is:
 
 ```text
-Reach +10% for challenge, then +5% for verification, before hitting daily or global loss limits, within 90 days total.
+Reach +10% for challenge, then +5% for verification, before hitting daily or global loss limits, with pass rate prioritized over speed.
 ```
 
 After funded status, the objective changes. The funded-stage goal is lower-risk survival and steady extraction, currently framed as roughly `1% -> 3%` monthly on aggregated funded capital rather than continuing to chase evaluation-speed returns.
 
 This implies separate operating modes:
 
-- Evaluation mode: higher risk and enough trade frequency to hit targets quickly.
+- Evaluation mode: enough risk and trade frequency to pass often without excessive breach or consistency-rule risk.
 - Funded mode: lower risk, lower breach probability, and stable monthly profitability.
 
 ## Strategy Unit Definition
@@ -152,13 +152,13 @@ Minimum symbol acceptance:
 
 ## Portfolio-Level Target
 
-For the under-`90`-day FTMO objective, the portfolio likely needs more trade frequency than the current four-symbol core provides.
+For the FTMO challenge objective, the portfolio likely needs enough trade frequency to produce high pass rates without forcing excessive risk.
 
 Use rough trade-frequency targets rather than symbol count alone:
 
 - The portfolio should contain enough behaviorally distinct strategy units to generate meaningful `90`-day opportunity count.
 - `8` symbols with `3` independent clusters each may be better than `20` symbols with one fragile cluster each.
-- A practical early target is `20 -> 30` behaviorally distinct strategy units, then test whether that produces enough closed trades and first-passage speed.
+- A practical early target is `20 -> 30` behaviorally distinct strategy units, then test whether that produces enough closed trades and pass-rate quality.
 
 Current expected starting universe remains the expanded basket unless a new research phase deliberately changes it:
 

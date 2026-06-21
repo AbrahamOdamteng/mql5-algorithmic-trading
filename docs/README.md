@@ -22,7 +22,7 @@ The practical goal is to develop an EA configuration that can help pass an FTMO-
 
 Goal realignment set on `2026-06-14`: the project now separates FTMO evaluation mode from funded-account mode. The evaluation/challenge strategy does not need to be the same as the funded strategy.
 
-Evaluation mode is an account-acquisition engine. It may accept a high challenge-failure rate if the expected challenge-fee cost per successfully funded account remains economically reasonable. The practical challenge target is to reach the FTMO `+10%` target before daily/global breach, preferably in roughly `20 -> 30` trading days and with `40` trading days treated as the current upper acceptable limit. This is not a strict calendar-day target; weekend market closures mean both trading days and calendar days should be reported.
+Evaluation mode is an account-acquisition engine. As of `2026-06-21`, challenge strategy search should optimize single-stage pass rate first, not fastest pass speed. The current hard promotion gate is `>= 75%` single-stage pass rate, with `>= 85%` preferred. Speed remains a secondary sanity check, consistency-rule diagnostics should be reported, and both trading days and calendar days should be included.
 
 Funded mode is a capital-preservation and extraction engine. After funded status, the target is not another fast `+10%` first-passage objective. The intended funded-account goal is lower-risk survival and steady extraction of roughly `1% -> 3%` monthly, eventually scaled across additional accounts toward about `1,000,000` in funded capital.
 
@@ -31,6 +31,33 @@ This goal realignment does not delete the older robustness goals. The fixed-mani
 The intended deployment is multi-symbol: a single parameter manifold should eventually be tested across multiple symbols and symbol types, including FX, metals, and indices. If the same manifold performs acceptably across a diverse subset of markets, that is treated as stronger evidence of robustness than a single-symbol result.
 
 New research extension: a symbol-specific behavior-cluster workflow is also being considered. Instead of requiring one global manifold to work across all symbols, each symbol may earn inclusion by showing multiple distinct profitable behavior clusters. A live portfolio would then be built from `symbol + behavior cluster` strategy units, with one random or median representative chosen from each accepted cluster. This is documented in `behavior-clusters.md` and does not delete or replace the older fixed-manifold workflow.
+
+## Current OANDA Personal-Account Plan
+
+As of `2026-06-20`, the OANDA personal-account track produced the lead candidate below. As of `2026-06-21`, FTMO challenge requirements are active again as a separate pass-rate-first research track. The OANDA plan remains useful for personal-account deployment but should not constrain FTMO challenge strategy generation.
+
+The OANDA sub-goal is a personal account starting around `10,000`, trading `EURUSD` and `XAUUSD` with the same fixed manifold, and attempting to outperform a rough S&P500-style benchmark of `10,000 -> 80,000` over a long horizon.
+
+Current lead candidate:
+
+- Official name: `OANDA-EURXAU-P2012`.
+- Short name: `OANDA P2012`.
+- File-safe prefix: `OANDA_EURXAU_P2012`.
+- Source identity: `Pass 2012` from the OANDA EURUSD D1 stop-loss-split genetic run in `reports/oanda_eurusd_xauusd_same_manifold_20260619`.
+- Fixed parameters are preserved in `Profiles/Tester/ImpulseContinuation_OANDA_SameManifold_Pass2012.set` and copied into the experiment report folder.
+- Evidence so far: passed EURUSD/XAUUSD fixed transfer tests, normalized portfolio replay, random execution-noise Monte Carlo, shifted-window validation, and MT5 floating/equity drawdown review.
+- Practical risk-sizing result for a `10,000` account: `0.50%` is a conservative live start, `0.75%` is the lowest tested risk that robustly clears the `80,000` full-period benchmark, and `1.00%` is aggressive but historically supported after live/demo execution behavior is confirmed.
+
+Remaining live-readiness plan:
+
+- Run a tiny live or demo forward test on OANDA using `OANDA-EURXAU-P2012` and both `EURUSD` and `XAUUSD`.
+- Confirm pending-order fills, spread behavior, lot sizing, margin use, symbol properties, and CSV logging outside the tester.
+- Create final deployment presets for `EURUSD` and `XAUUSD`, including selected `g_Risk_Percentage`, CSV identity fields, and any live-only inputs.
+- Check minimum-lot and lot-step feasibility on a `10,000` account, especially for `XAUUSD`, so requested percentage risk is actually achievable.
+- Decide a news-event pause policy for NFP, CPI, FOMC, and major rate decisions before risking meaningful live capital.
+- Review and ideally implement duplicate pending-order / existing-position guards before real deployment, because the current EA can otherwise stack repeated exposure from the same signal.
+
+Operational status: these remaining items are deployment safety checks, not new strategy discovery. Do not start new broad optimizations for this OANDA track unless `OANDA-EURXAU-P2012` fails live/demo execution validation or a specific new hypothesis is defined.
 
 Current cross-symbol candidate-promotion workflow:
 
@@ -139,14 +166,14 @@ FTMO-first evaluation plan:
 - Treat fixed MT5 reports as candidate discovery and stress-test artifacts, not as the final FTMO decision tool.
 - The primary FTMO question is path-dependent: does a rolling simulated account reach `+10%` before `-10%`, while respecting the daily loss rule.
 - Full-period report drawdown can reject a strategy that would have passed an FTMO-style challenge before a later drawdown occurred, so report-level DD should remain a sanity check rather than the final ranking metric.
-- As of `2026-06-14`, rank challenge-mode candidates by `+10%` first-passage before breach, with preferred pass speed around `20 -> 30` trading days and an upper acceptable limit of `40` trading days. Report calendar days as a secondary operational metric.
-- Because challenge mode is allowed to be an account-acquisition engine, also estimate expected challenge-fee cost per funded account and losing-streak risk, not only pass rate.
+- As of `2026-06-21`, rank challenge-mode candidates by single-stage pass rate first, not fastest pass speed. Use `>= 75%` as the hard promotion gate and `>= 85%` as the preferred threshold.
+- Because challenge mode is allowed to be an account-acquisition engine, also estimate expected challenge-fee cost per pass, losing-streak risk over `10` attempts, daily/global breach frequency, unresolved starts, and consistency-rule warnings.
 - Evaluate funded mode separately at lower risk, targeting `1% -> 3%` monthly with low breach probability and payout survival.
 - Modify the CSV trade logger to write enough identity metadata to analyze each manifold independently: `manifold_id`, `test_id`, existing symbol/deal/trade fields, timestamps, P/L, and risk percentage.
 - Write one CSV per manifold, appending rows as symbol/segment tests complete. Analysis should sort by `deal_time`, so MT5 test execution order does not matter.
 - FTMO rolling analysis should deduplicate rerun rows using a stable key such as `manifold_id + test_id + symbol + ticket + trade_id + entry_type + deal_time`.
 - Rank manifolds by pass rate first, median pass duration second, and average pass duration third.
-- New speed target: challenge plus verification should complete within `90` calendar days. Evaluation-mode risk and trade frequency should be judged against `+10%` challenge followed by `+5%` verification before daily/global breach. Funded-mode evaluation is separate and should target lower-risk `1% -> 3%` monthly profitability on aggregated funded capital.
+- New challenge requirement source: `ftmo-challenge-requirements.md`. Evaluation-mode risk and trade frequency should be judged against `+10%` challenge followed by `+5%` verification before daily/global breach, with pass rate prioritized over raw speed. Funded-mode evaluation is separate and should target lower-risk `1% -> 3%` monthly profitability on aggregated funded capital.
 
 Immediate next workflow:
 
@@ -161,10 +188,10 @@ Provisional FTMO grading:
 
 | Grade | Pass rate | Median pass duration | Average pass duration |
 | --- | ---: | ---: | ---: |
-| `A` | `>= 90%` | `<= 90 days` | `<= 120 days` |
-| `B` | `>= 85%` | `<= 120 days` | `<= 150 days` |
-| `C` | `>= 80%` | `<= 180 days` | `<= 240 days` |
-| Reject | `< 80%` | or too slow | or too slow |
+| `A` | `>= 90%` | preferred `<= 90 trading days` | secondary |
+| `B` | `>= 85%` | warning if `> 90 trading days` | secondary |
+| `C` | `>= 75%` | strong warning if `> 120 trading days` | secondary |
+| Reject | `< 75%` | or severe breach/consistency risk | secondary |
 
 Use `C` as the provisional minimum viable FTMO grade and `B` as the preferred minimum. Challenge and verification pass rates compound, while funded-stage payout does not require another `+10%` first-passage target. Also report unresolved starts separately because unresolved simulations tie up capital/time even if they do not fail.
 
@@ -172,10 +199,13 @@ Use `C` as the provisional minimum viable FTMO grade and `B` as the preferred mi
 
 - `architecture.md`: How the EA, indicator, and include files fit together.
 - `signal-flow.md`: Current signal and order placement flow.
+- `ftmo-challenge-requirements.md`: Current pass-rate-first requirements for challenge-stage strategy generation and replay.
 - `behavior-clusters.md`: Proposed symbol-specific parameter-family and trade-behavior cluster workflow for finding distinct strategy units.
 - `discovery-findings.md`: Important findings, risks, and mismatches found during discovery.
 - `open-questions.md`: Decisions that need clarification before larger changes.
-- `experiment-log.md`: Running log of experiments and outcomes. Do not update it unless explicitly asked.
+- `experiment-log.md`: Legacy mixed running log of experiments and outcomes. Do not update it unless explicitly asked.
+- `ftmo-challenge-experiment-log.md`: Dedicated log for FTMO challenge-stage pass-rate-first research.
+- `ftmo-funded-experiment-log.md`: Dedicated log for FTMO funded-stage survival, payout, and monthly-return research.
 - `utils/README.md`: Reusable PowerShell utilities for parsing MT5 optimizer/forward XML files and fixed OOS `.xml.htm` reports.
 
 ## Discovery Date

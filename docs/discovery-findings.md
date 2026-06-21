@@ -67,6 +67,8 @@ When a signal is detected, the EA places a pending order without checking for:
 
 This can create repeated exposure if signal conditions are met more than once.
 
+For the current OANDA `OANDA-EURXAU-P2012` personal-account deployment track, this should be treated as a live-readiness blocker or at least a high-priority safety review. Before real capital deployment, decide whether to block duplicate pending orders by symbol/signal, block new orders when there is an existing position, and/or filter all EA-managed orders by magic number.
+
 ## Medium Priority
 
 ### Lookback Inputs Are Bar Counts, Not Hours

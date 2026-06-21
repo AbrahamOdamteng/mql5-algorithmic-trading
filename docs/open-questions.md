@@ -27,10 +27,14 @@ These are the decisions that should be clarified before larger refactors or stra
 
 ## Risk And Execution
 
-1. What default value should `g_Risk_Percentage` use for future tests and live simulations?
-2. Should the EA set and filter by magic number?
-3. Should the EA block duplicate pending orders for the same symbol/signal?
-4. Should the EA ignore signals when there is already an open position or pending order?
+1. For the OANDA personal-account `OANDA-EURXAU-P2012` deployment track, practical live risk is currently framed as `0.50% -> 0.75%` per trade on a `10,000` account. `0.75%` is the benchmark-beating target setting; `1.00%` is aggressive and should wait until live/demo execution behavior is confirmed.
+2. What default value should `g_Risk_Percentage` use for final live presets: start at `0.50%`, start at `0.75%`, or use a staged ramp from `0.50%` to `0.75%` after forward validation?
+3. Should the EA set and filter by magic number?
+4. Should the EA block duplicate pending orders for the same symbol/signal?
+5. Should the EA ignore signals when there is already an open position or pending order?
+6. For OANDA live deployment, should duplicate-order and existing-position guards be treated as mandatory before real capital is used?
+7. What news-event pause policy should be used for `EURUSD` and `XAUUSD`: NFP only, NFP/CPI/FOMC, all high-impact USD events, or no automated pause initially?
+8. Should the tiny live/demo forward test use `0.50%` risk, lower than `0.50%`, or fixed minimum lot sizing until execution behavior is confirmed?
 
 ## Logging
 
@@ -56,11 +60,12 @@ These are the decisions that should be clarified before larger refactors or stra
 10. What concentration cap should be used so one candidate cannot dominate `S^` aggregate profit, trade count, or drawdown?
 11. How should EURUSD-source selection bias be measured after cross-symbol `IS + VAL` and OOS filtering?
 12. For FTMO evaluation, should report-level max drawdown remain only a coarse sanity filter while final ranking comes from rolling challenge simulations?
-13. Provisional FTMO grading decision: rank by pass rate first, median pass duration second, and average pass duration third. Minimum viable evaluation pass rate is currently `>= 80%`, with `>= 85%` preferred because challenge and verification pass rates compound. Funded-stage payout should be evaluated as survival/profitability rather than another `+10%` first-passage target.
-14. Goal realignment set on `2026-06-14`: evaluation/challenge mode and funded mode may use different strategies. Challenge mode should be treated as account acquisition, targeting `+10%` before breach, preferably in `20 -> 30` trading days and with `40` trading days as the current upper acceptable limit. Funded mode should target lower-risk `1% -> 3%` monthly extraction and account survival.
-15. Challenge-mode analysis should report expected challenge-fee cost per funded account and losing-streak distribution, because a high challenge-failure rate may be acceptable if the funded-mode economics remain positive.
+13. Provisional FTMO grading decision: rank by single-stage pass rate first, then breach behavior, consistency warnings, median pass duration, average pass duration, fee economics, and losing-streak distribution. Minimum viable evaluation pass rate is currently `>= 75%`, with `>= 85%` preferred because challenge and verification pass rates compound. Funded-stage payout should be evaluated as survival/profitability rather than another `+10%` first-passage target.
+14. Goal realignment set on `2026-06-14` and refined on `2026-06-21`: evaluation/challenge mode and funded mode may use different strategies. Challenge mode should be treated as account acquisition, targeting `+10%` before breach with pass rate prioritized over raw speed. Funded mode should target lower-risk `1% -> 3%` monthly extraction and account survival.
+15. Challenge-mode analysis should report expected challenge-fee cost per pass, losing-streak distribution over `10` attempts, unresolved starts, daily/global breach frequency, and consistency-rule warnings. Current fixed assumptions are `100,000` account size, `GBP 500` challenge fee, refund on first payout, and maximum modeled retries/loss streak of `10`.
 16. Funded-mode analysis should report monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months instead of using fast `+10%` pass speed.
 17. Promising `S^` portfolios should be stress-tested with cost/spread assumptions, trade-skip or Monte Carlo perturbations, and shifted windows before being treated as robust.
+18. OANDA personal-account track decision: `OANDA-EURXAU-P2012` is the current lead same-manifold candidate for `EURUSD + XAUUSD`. Its source optimizer identity is pass `2012`. Remaining work is operational validation rather than broad optimization: tiny live/demo forward test, deployment preset check, lot-step feasibility, news pause policy, and duplicate-order guard review.
 
 ## Behavior Cluster Research
 
@@ -72,5 +77,5 @@ These are the decisions that should be clarified before larger refactors or stra
 6. What price tolerance should be used for trade matching: fixed points, ATR fraction such as `0.25 ATR`, R-multiple fraction such as `0.25R`, or no price tolerance initially?
 7. Should representatives be selected randomly from each accepted behavior cluster, or should median-quality representatives be used for deterministic reproducibility?
 8. How many random portfolio samples are needed before judging a symbol-specific cluster family robust?
-9. For the under-`90`-day FTMO objective, what is the minimum acceptable probability of completing challenge `+10%` plus verification `+5%` before daily/global breach?
+9. For the pass-rate-first FTMO objective, should two-stage challenge-plus-verification promotion require a minimum compounded success probability beyond the single-stage `>= 75%` hard gate and `>= 85%` preferred gate?
 10. How should evaluation-mode risk differ from funded-mode risk, given the funded-stage target is steady `1% -> 3%` monthly profit rather than another fast `+10%` first-passage target?
