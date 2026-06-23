@@ -9,6 +9,9 @@
 #property indicator_chart_window
 
 input ENUM_TIMEFRAMES g_HighLowPeriod = PERIOD_D1;
+input int g_HighLowPeriodOptimizationIndex = -1;
+
+ENUM_TIMEFRAMES g_ActiveHighLowPeriod = PERIOD_D1;
 
 #include <WeekHighLows/datatypes.mqh>
 #include <WeekHighLows/cluster_logic.mqh>
@@ -42,7 +45,11 @@ RatesCircularBuffer *g_pullbackBuffer = NULL;
 int OnInit()
 {
    //--- indicator buffers mapping
-         Print("OnInit Doing Work");
+          Print("OnInit Doing Work");
+
+   g_ActiveHighLowPeriod = ResolveHighLowPeriod(g_HighLowPeriodOptimizationIndex, g_HighLowPeriod);
+   Print("Active high/low period: ", HighLowPeriodToString(g_ActiveHighLowPeriod),
+         " selector=", IntegerToString(g_HighLowPeriodOptimizationIndex));
 
    g_ImpulseBuffer = new RatesCircularBuffer(g_impulse_lookback_hours);
    g_pullbackBuffer = new RatesCircularBuffer(g_impulse_lookback_hours);

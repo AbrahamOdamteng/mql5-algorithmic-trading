@@ -14,7 +14,19 @@ This directory captures working knowledge for the WeekHighLow EA and indicator s
 
 The project appears to track previous period highs and lows, measure impulse and pullback behavior around those levels, detect continuation-style setups, and place pending breakout orders around the detected level.
 
-The current code creates levels on weekly boundaries using `PERIOD_W1`.
+The current code creates levels from the active high/low period. By default this is `PERIOD_D1`, but `g_HighLowPeriodOptimizationIndex` can make the genetic optimizer choose among `H4`, `H6`, `H8`, `H12`, `D1`, and `W1`.
+
+High/low period selector mapping:
+
+| `g_HighLowPeriodOptimizationIndex` | Active period |
+| ---: | --- |
+| `-1` | Use fixed `g_HighLowPeriod` |
+| `0` | `PERIOD_H4` |
+| `1` | `PERIOD_H6` |
+| `2` | `PERIOD_H8` |
+| `3` | `PERIOD_H12` |
+| `4` | `PERIOD_D1` |
+| `5` | `PERIOD_W1` |
 
 ## Current Goal
 

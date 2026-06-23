@@ -6,6 +6,34 @@
 #include "drawing_functions.mqh"
 #include  "rates_circular_buffer.mqh"
 
+ENUM_TIMEFRAMES ResolveHighLowPeriod(int optimizationIndex, ENUM_TIMEFRAMES defaultPeriod)
+{
+   switch(optimizationIndex)
+   {
+      case 0: return PERIOD_H4;
+      case 1: return PERIOD_H6;
+      case 2: return PERIOD_H8;
+      case 3: return PERIOD_H12;
+      case 4: return PERIOD_D1;
+      case 5: return PERIOD_W1;
+      default: return defaultPeriod;
+   }
+}
+
+string HighLowPeriodToString(ENUM_TIMEFRAMES period)
+{
+   switch(period)
+   {
+      case PERIOD_H4:  return "H4";
+      case PERIOD_H6:  return "H6";
+      case PERIOD_H8:  return "H8";
+      case PERIOD_H12: return "H12";
+      case PERIOD_D1:  return "D1";
+      case PERIOD_W1:  return "W1";
+      default:         return EnumToString(period);
+   }
+}
+
 void createNewWeekData(WeekData &weeks[], MqlRates &currentBar, RatesCircularBuffer &lookbackBuffer)
 {
    int currentArraySize = ArraySize(weeks);
@@ -167,7 +195,7 @@ void calculateWeeklyATR(WeekData &weeks[], int period, MqlRates &currentBar)
 void detectWeeks( MqlRates &currentBar, MqlRates &previouseBar,WeekData &weeks[], int atrPeriod, RatesCircularBuffer &impulseBuffer){
 
    // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
-   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time, g_HighLowPeriod);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time, g_ActiveHighLowPeriod);
    if (isStartOfNewWeek){
       DrawCurrentBarLine(currentBar.time);
       calculateWeeklyATR(weeks, atrPeriod, currentBar);
@@ -185,7 +213,7 @@ void detectWeeks( MqlRates &currentBar, MqlRates &previouseBar,WeekData &weeks[]
 
 void detectWeekHighLows(  MqlRates &currentBar, MqlRates &previouseBar , WeekData &weeks[], WeekHighLow &weekHighs[], WeekHighLow &weekLows[]){
    // bool isStartOfNewWeek = isNewWeek(currentBar.time, previouseBar.time);
-   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time, g_HighLowPeriod);
+   bool isStartOfNewWeek = IsNewPeriod(currentBar.time, previouseBar.time, g_ActiveHighLowPeriod);
    int weekSize          = ArraySize(weeks);
    int weekHighSize      = ArraySize(weekHighs);
    int weekLowSize       = ArraySize(weekLows);

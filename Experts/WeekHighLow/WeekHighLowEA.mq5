@@ -8,6 +8,9 @@
 #property version   "1.00"
 
 input ENUM_TIMEFRAMES g_HighLowPeriod = PERIOD_D1;
+input int g_HighLowPeriodOptimizationIndex = -1;
+
+ENUM_TIMEFRAMES g_ActiveHighLowPeriod = PERIOD_D1;
 
 #include <Trade/Trade.mqh>
 #include <WeekHighLows/datatypes.mqh>
@@ -55,6 +58,10 @@ RatesCircularBuffer *g_pullbackBuffer = NULL;
 //+------------------------------------------------------------------+
 int OnInit()
   {
+
+    g_ActiveHighLowPeriod = ResolveHighLowPeriod(g_HighLowPeriodOptimizationIndex, g_HighLowPeriod);
+    Print("Active high/low period: ", HighLowPeriodToString(g_ActiveHighLowPeriod),
+          " selector=", IntegerToString(g_HighLowPeriodOptimizationIndex));
 
     g_ImpulseBuffer = new RatesCircularBuffer(g_impulse_lookback_hours);
     g_pullbackBuffer = new RatesCircularBuffer(g_pullback_lookforward_hours);

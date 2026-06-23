@@ -2,9 +2,11 @@
 
 ## High Priority
 
-### Weekly Period Detection
+### Optimizable High/Low Period Detection
 
-The active code now detects period changes with `PERIOD_W1`.
+The active code now detects period changes with `g_ActiveHighLowPeriod`, resolved from `g_HighLowPeriodOptimizationIndex` and `g_HighLowPeriod`.
+
+`g_HighLowPeriodOptimizationIndex = -1` preserves fixed-period behavior using `g_HighLowPeriod`. Genetic optimization can sweep `0 -> 5` to test `PERIOD_H4`, `PERIOD_H6`, `PERIOD_H8`, `PERIOD_H12`, `PERIOD_D1`, and `PERIOD_W1`.
 
 This affects:
 
@@ -15,7 +17,7 @@ This affects:
 - `detectImpulseContinuationSignalV1()`
 - `DetectClusteredImpulseContinuationSignal()`
 
-This matches the weekly terminology used by the main data structures and helper names.
+The implementation still uses weekly terminology in data structures and helper names, but the runtime behavior is now generalized to the selected high/low period.
 
 ### EA And Indicator Do Not Show The Same Strategy
 

@@ -563,3 +563,70 @@ Each entry should include:
 - File-safe prefix: `OANDA_EURXAU_P2012`.
 - Source identity: original optimizer pass `2012` from the OANDA EURUSD D1 stop-loss-split genetic run, validated as the same-manifold `EURUSD + XAUUSD` candidate.
 - Decision or next step: Use `OANDA-EURXAU-P2012` in future docs when referring to the current lead OANDA personal-account deployment candidate.
+
+### 2026-06-21 - Optimizable High/Low Period Selector
+
+- Goal: Make the high/low period selectable by the MT5 genetic optimizer without relying on raw `ENUM_TIMEFRAMES` values.
+- Change: Added `g_HighLowPeriodOptimizationIndex` to the EA and indicator, while preserving fixed `g_HighLowPeriod` behavior when the selector is `-1`.
+- Change: Added shared mapping helpers so optimizer index `0 -> 5` resolves to `H4`, `H6`, `H8`, `H12`, `D1`, and `W1`.
+- Change: Updated shared period and signal logic to use `g_ActiveHighLowPeriod` instead of reading `g_HighLowPeriod` directly.
+- Test setup: Compile verification only; no MT5 optimizer or backtest run was launched.
+- Outcome: `WeekHighLowEA.mq5` compiled with `0` errors and `0` warnings. `WeekHighLowIndicator.mq5` compiled with `0` errors and the existing `no indicator plot defined` warning.
+- Decision or next step: New genetic discovery presets can use `g_HighLowPeriodOptimizationIndex=4||0||1||5||Y`; existing fixed presets can keep selector `-1` or omit it to preserve fixed-period behavior.
+
+### 2026-06-22 - EURUSD H12-Max Period Optimization Genetic Review
+
+- Goal: Review the latest EURUSD genetic period-optimization run where the highest selectable high/low period was `H12`.
+- Source folder: terminal-data `reports/period_opt_h12max_isval_20260621`.
+- Source files: `EURUSD_PeriodOpt_H12Max_ISVAL_2000_2018_FWD_20260621.xml`, matching `.forward.xml`, `period_opt_h12max_all_paired_with_period.csv`, `period_opt_h12max_period_summary.csv`, `period_opt_h12max_loose_candidates.csv`, `period_opt_h12max_cross_symbol_shortlist_top25.csv`, and `period_opt_h12max_challenge_profit_shortlist_top50.csv`.
+- Test setup: EURUSD, `H1` tester timeframe, genetic optimizer-forward test over `2000.01.01 -> 2018.01.01`, with high/low period selector range `0 -> 3` covering `H4`, `H6`, `H8`, and `H12`.
+- Overall outcome: `4,091` optimizer/forward paired rows, `1,485` positive IS+forward pairs, and `82` rows passing the profit/DD screen of positive IS and forward profit, IS and forward ratio `>= 2`, and IS and forward DD `<= 30%`.
+- Period summary: `H4` had `777` paired rows, `50` positive pairs, `10` ratio/DD passes, and best combined profit `182,305.69`; `H6` had `614` paired rows, `186` positive pairs, `20` ratio/DD passes, and best combined profit `182,573.12`; `H8` had `591` paired rows, `193` positive pairs, `17` ratio/DD passes, and best combined profit `252,382.34`; `H12` had `2,109` paired rows, `1,056` positive pairs, `35` ratio/DD passes, and best combined profit `723,170.47`.
+- Interpretation: `H12` produced the largest and most profitable search space, but the highest raw-profit H12 rows often had weak forward balance or excessive drawdown. The best practical shortlist should not be selected by raw combined profit alone.
+- Notable candidate `2866`: `H8`, IS profit `149,147.35`, forward profit `103,234.99`, combined profit `252,382.34`, min ratio `3.659`, total trades `3,485`, IS DD `31.98%`, and forward DD `28.21%`. This is the strongest high-trade candidate, but it slightly exceeds the `30%` IS DD cap.
+- Notable candidate `970`: `H12`, IS profit `64,493.19`, forward profit `72,381.38`, combined profit `136,874.57`, min ratio `3.206`, total trades `797`, max DD `22.32%`.
+- Notable candidate `2873`: `H12`, IS profit `45,257.91`, forward profit `43,602.46`, combined profit `88,860.37`, min ratio `4.098`, total trades `546`, max DD `11.04%`. This was the best clean ratio candidate with meaningful trade count.
+- Notable candidate `3400`: `H12`, IS profit `74,696.23`, forward profit `47,253.58`, combined profit `121,949.81`, min ratio `3.812`, total trades `365`, max DD `19.60%`.
+- Notable candidate `2551`: `H12`, IS profit `25,866.55`, forward profit `21,356.82`, combined profit `47,223.37`, min ratio `6.138`, max DD `4.13%`, but only `44` IS trades and `22` forward trades, making it too thin as a primary candidate.
+- Decision or next step: Do not promote from optimizer-forward results alone. If continuing this branch, create fixed OOS tests for a small shortlist including `2866`, `970`, `2873`, and `3400`, with optional higher-trade H12 candidates such as `1430` and `2190` tracked despite drawdown warnings.
+
+### 2026-06-23 - OANDA-EURXAU-P2012 FX28 IS+VAL Transfer Test
+
+- Goal: Test whether the current lead OANDA personal-account manifold `OANDA-EURXAU-P2012` transfers across the standard `28` FX-pair universe before considering wider portfolio use or session-filter follow-up.
+- Source folder: terminal-data `reports/oanda_pass2012_fx28_isval_20260623`.
+- Setup script: `Files/WeekHighLow/Run-OANDA-Pass2012-FX28-IsVal-20260623.ps1`.
+- Preset snapshot: `ImpulseContinuation_OANDA_EURXAU_P2012_FX28_ISVAL.set`.
+- Test setup: Fixed single-test MT5 reports, optimization disabled, `H1` tester timeframe, P2012 parameters, `g_Risk_Percentage=1.0`, `IS` segment `2000.01.01 -> 2012.01.01`, and `VAL` segment `2012.01.01 -> 2018.01.01`.
+- Scope: `28` FX symbols and `2` segments, producing `56` expected tests.
+- Run status: `56 / 56` tests completed, `56 / 56` reports parsed, `0` timeouts, and `0` failed reports.
+- CSV status: No `manifold_trades_OANDA_EURXAU_P2012_FX28_ISVAL.csv` was found after this run, so the completed batch was report-only and cannot be used for entry-hour filtering without a CSV replay rerun.
+- Analysis files created: `oanda_pass2012_fx28_isval_parsed_reports.csv` and `oanda_pass2012_fx28_isval_symbol_summary.csv` in the source folder.
+- Acceptance screen used: profit `> 0`, profit/DD ratio `>= 2.0`, and equity DD `<= 30%` per report row.
+- Overall result: `56` report rows parsed, `4` rows accepted, `28` complete symbols, only `1` symbol accepted in both `IS + VAL`, only `1` symbol profitable in both `IS + VAL`, only `1` symbol ratio-qualified in both `IS + VAL`, and only `3` symbols under the `30%` DD cap in both periods.
+- Only full IS+VAL accepted symbol: `EURUSD`, with IS profit `605,671.94`, IS DD `19.63%`, IS ratio `30.854`, IS trades `731`, VAL profit `66,448.71`, VAL DD `21.46%`, VAL ratio `3.096`, VAL trades `336`, and total profit `672,120.65`.
+- Other accepted individual rows: `USDJPY VAL` profit `85,582.91`, DD `22.93%`, ratio `3.732`, trades `311`; `GBPJPY VAL` profit `45,469.63`, DD `17.86%`, ratio `2.546`, trades `319`.
+- Notable non-promoted symbols: `USDJPY` had strong validation profit but failed IS with IS profit `-28,728.95`, IS ratio `-0.528`, and max DD `54.46%`; `GBPJPY` had strong validation profit but failed IS with IS profit `-83,508.78`, IS ratio `-0.941`, and max DD `88.79%`; `GBPUSD` had VAL profit `15,434.78` but failed IS and ratio quality; `NZDJPY` had small VAL profit but failed IS and ratio quality.
+- Major failures by total profit included `GBPNZD`, `AUDJPY`, `GBPCAD`, `EURCHF`, `AUDNZD`, `EURNZD`, `AUDCAD`, `NZDUSD`, `NZDCAD`, and `GBPAUD`.
+- Interpretation: P2012 does not transfer across FX28. It remains an `EURUSD + XAUUSD` personal-account candidate rather than a broad FX manifold.
+- Decision or next step: Do not promote P2012 as a general FX strategy. If testing the session-filter hypothesis, rerun a smaller CSV-enabled batch first, likely `USDJPY`, `GBPJPY`, `GBPUSD`, and `NZDJPY`, with `VAL` only as the cheapest first pass before spending time on full IS+VAL CSV replay.
+
+### 2026-06-23 - OANDA-EURXAU-P2012 FX28 Entry-Hour Filter Review
+
+- Goal: Test whether entry-hour filtering can rescue weak FX symbols for the P2012 fixed manifold, using trade CSV rows from the FX28 IS+VAL rerun.
+- Source trade CSV: common-files `manifold_trades_OANDA_EURXAU_P2012_FX28_ISVAL.csv`.
+- Source report folder: terminal-data `reports/oanda_pass2012_fx28_isval_20260623`.
+- CSV-enabled rerun status: Progress log contained a second full completed run for `56 / 56` tests, and the trade CSV was generated successfully.
+- CSV health: `50,141` raw CSV rows, `50,141` rows after stable-key dedupe, `25,065` paired closed trades, `11` unmatched entry rows ignored, and `0` unmatched exit rows. Trade rows existed for `27 / 28` FX symbols; `CADCHF` had no trade rows.
+- Analysis method: Pair entry and exit rows by `test_id + trade_id`; use the `IN` row hour as trade start hour; keep matching exits for allowed entries; calculate per-symbol/per-segment closed-trade net, profit factor, closed drawdown, return/DD, and an accepted proxy of net `> 0`, return/DD `>= 2.0`, and closed DD `<= 30%`.
+- Analysis files created for `08 -> 17`: `oanda_pass2012_fx28_isval_entry_hour_08_17_symbol_segment.csv`, `oanda_pass2012_fx28_isval_entry_hour_08_17_symbol_summary.csv`, and `oanda_pass2012_fx28_isval_entry_hour_stats.csv`.
+- `08 -> 17` result: IS profitable rows improved from `1 / 27` to `2 / 27`; VAL profitable rows improved from `8 / 27` to `9 / 27`; IS accepted-proxy rows stayed `1 / 27`; VAL accepted-proxy rows stayed `3 / 27`; symbols profitable in both IS+VAL stayed `1`; symbols accepted in both IS+VAL stayed `1`.
+- `08 -> 17` aggregate effect: IS aggregate net improved from `-1,038,845.36` to `-516,419.35`; VAL aggregate net improved from `-641,325.95` to `-198,818.11`; `25` symbols improved total net and `2` worsened. The filter reduced damage but did not rescue broad FX transferability.
+- `08 -> 17` notable result: `USDJPY` improved from IS `-28,728.95` and VAL `85,582.91` to filtered IS `-660.95` and filtered VAL `97,833.44`, making it a close but still not profitable-both candidate.
+- Analysis files created for `12 -> 17`: `oanda_pass2012_fx28_isval_entry_hour_12_17_symbol_segment.csv` and `oanda_pass2012_fx28_isval_entry_hour_12_17_symbol_summary.csv`.
+- `12 -> 17` result: IS profitable rows improved from `1 / 27` to `3 / 27`; VAL profitable rows improved from `8 / 27` to `9 / 27`; symbols profitable in both IS+VAL improved from `1` to `2`; symbols accepted in both IS+VAL stayed `1`.
+- `12 -> 17` aggregate effect: IS aggregate net improved from `-1,038,845.36` to `-339,210.59`; VAL aggregate net improved from `-641,325.95` to `-106,442.21`; `25` symbols improved total net and `2` worsened.
+- `12 -> 17` accepted symbol: `EURUSD` remained accepted, with filtered IS net `371,472.51`, IS trades `354`, IS PF `1.639`, IS closed DD `26.04%`, IS return/DD `14.268`, filtered VAL net `58,820.35`, VAL trades `152`, VAL PF `1.549`, VAL closed DD `15.77%`, and VAL return/DD `3.731`.
+- `12 -> 17` near-miss symbol: `USDJPY` became profitable in both IS+VAL, with filtered IS net `13,242.88`, IS trades `377`, IS PF `1.061`, IS closed DD `22.68%`, IS return/DD `0.584`, filtered VAL net `77,583.15`, VAL trades `149`, VAL PF `1.594`, VAL closed DD `12.67%`, and VAL return/DD `6.123`. It is not accepted because IS return/DD is too weak.
+- Other filtered VAL-positive rows under `12 -> 17`: `GBPUSD`, `EURGBP`, `USDCAD`, `GBPCHF`, `AUDUSD`, `CHFJPY`, and `GBPJPY` had positive filtered VAL net, but did not pass both IS+VAL.
+- Interpretation: Session filtering is directionally useful and materially reduces losses, but it does not make P2012 a broad FX strategy. The only robust P2012 markets remain `EURUSD` and the previously validated `XAUUSD`; `USDJPY` is a session-filter near miss worth isolated follow-up, not a promoted symbol.
+- Decision or next step: Do not promote FX28. If continuing this branch, focus narrowly on `USDJPY` with adjacent windows such as `11 -> 17`, `12 -> 18`, `12 -> 20`, and exclude-only bad-hour tests, then require OOS before considering it alongside `EURUSD + XAUUSD`.

@@ -4,8 +4,8 @@ These are the decisions that should be clarified before larger refactors or stra
 
 ## Strategy Definition
 
-1. Should the active high/low period remain fixed as `PERIOD_W1`, or should the period be configurable?
-2. If made configurable, should names stay weekly-specific or be generalized from `Week*` to `Period*`?
+1. The active high/low period is now configurable and optimizer-selectable through `g_HighLowPeriodOptimizationIndex`. Supported optimizer values are `0 -> 5` for `H4`, `H6`, `H8`, `H12`, `D1`, and `W1`; `-1` preserves fixed `g_HighLowPeriod` behavior.
+2. Open naming question: should weekly-specific names such as `WeekData`, `WeekHighLow`, `detectWeeks()`, and `detectWeekHighLows()` be generalized from `Week*` to `Period*` in a future refactor?
 
 ## Indicator Alignment
 
@@ -51,21 +51,22 @@ These are the decisions that should be clarified before larger refactors or stra
 1. Are current tester presets targeting the intended strategy version?
 2. Should optimizer inputs include ATR period and min cluster size, or are those intentionally fixed?
 3. Should M15 tests use adjusted lookback values if inputs remain bar counts?
-4. Current candidate-promotion workflow: use the EURUSD genetic backtest to select top `N` candidates, run those candidates across all target symbols in in-sample plus validation, define `S*` as the successful cross-symbol subset, run only `S*` in OOS, and keep `S^`, the subset of `S*` that passes OOS.
-5. Current trade-count rule: do not eliminate individual candidates only because they have fewer than `100` trades. Evaluate trade count using the aggregate trade count of `S^`, the final OOS-passing subset.
-6. Current phase-1 basket decision: use `EURUSD`, `GBPUSD`, `USDJPY`, `EURJPY`, `XAUUSD`, `XAGUSD`, `US500`, `US30`, `US100`, `UK100`, `USOIL`, and `UKOIL`. Only the FX symbols showed effective full `2000 -> 2012` start coverage in the start-date probe. Treat `US30`, `US500`, `UK100`, `XAUUSD`, `XAGUSD`, `USOIL`, and `UKOIL` as partial-history IS symbols. Treat `US100` as validation/OOS-only from available history and do not use it for optimization.
-7. What per-symbol loss or drawdown cap should be used so one symbol cannot dominate portfolio risk?
-8. How large must `S^` be before it is considered more than a lucky survivor set: at least `2`, `3`, or more independent candidates?
-9. What concentration cap should be used so one symbol cannot dominate `S^` aggregate profit, trade count, or drawdown?
-10. What concentration cap should be used so one candidate cannot dominate `S^` aggregate profit, trade count, or drawdown?
-11. How should EURUSD-source selection bias be measured after cross-symbol `IS + VAL` and OOS filtering?
-12. For FTMO evaluation, should report-level max drawdown remain only a coarse sanity filter while final ranking comes from rolling challenge simulations?
-13. Provisional FTMO grading decision: rank by single-stage pass rate first, then breach behavior, consistency warnings, median pass duration, average pass duration, fee economics, and losing-streak distribution. Minimum viable evaluation pass rate is currently `>= 75%`, with `>= 85%` preferred because challenge and verification pass rates compound. Funded-stage payout should be evaluated as survival/profitability rather than another `+10%` first-passage target.
-14. Goal realignment set on `2026-06-14` and refined on `2026-06-21`: evaluation/challenge mode and funded mode may use different strategies. Challenge mode should be treated as account acquisition, targeting `+10%` before breach with pass rate prioritized over raw speed. Funded mode should target lower-risk `1% -> 3%` monthly extraction and account survival.
-15. Challenge-mode analysis should report expected challenge-fee cost per pass, losing-streak distribution over `10` attempts, unresolved starts, daily/global breach frequency, and consistency-rule warnings. Current fixed assumptions are `100,000` account size, `GBP 500` challenge fee, refund on first payout, and maximum modeled retries/loss streak of `10`.
-16. Funded-mode analysis should report monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months instead of using fast `+10%` pass speed.
-17. Promising `S^` portfolios should be stress-tested with cost/spread assumptions, trade-skip or Monte Carlo perturbations, and shifted windows before being treated as robust.
-18. OANDA personal-account track decision: `OANDA-EURXAU-P2012` is the current lead same-manifold candidate for `EURUSD + XAUUSD`. Its source optimizer identity is pass `2012`. Remaining work is operational validation rather than broad optimization: tiny live/demo forward test, deployment preset check, lot-step feasibility, news pause policy, and duplicate-order guard review.
+4. For genetic period optimization, should `g_HighLowPeriodOptimizationIndex=4||0||1||5||Y` become the standard preset line for new discovery runs, or should period optimization be enabled only for specific hypotheses?
+5. Current candidate-promotion workflow: use the EURUSD genetic backtest to select top `N` candidates, run those candidates across all target symbols in in-sample plus validation, define `S*` as the successful cross-symbol subset, run only `S*` in OOS, and keep `S^`, the subset of `S*` that passes OOS.
+6. Current trade-count rule: do not eliminate individual candidates only because they have fewer than `100` trades. Evaluate trade count using the aggregate trade count of `S^`, the final OOS-passing subset.
+7. Current phase-1 basket decision: use `EURUSD`, `GBPUSD`, `USDJPY`, `EURJPY`, `XAUUSD`, `XAGUSD`, `US500`, `US30`, `US100`, `UK100`, `USOIL`, and `UKOIL`. Only the FX symbols showed effective full `2000 -> 2012` start coverage in the start-date probe. Treat `US30`, `US500`, `UK100`, `XAUUSD`, `XAGUSD`, `USOIL`, and `UKOIL` as partial-history IS symbols. Treat `US100` as validation/OOS-only from available history and do not use it for optimization.
+8. What per-symbol loss or drawdown cap should be used so one symbol cannot dominate portfolio risk?
+9. How large must `S^` be before it is considered more than a lucky survivor set: at least `2`, `3`, or more independent candidates?
+10. What concentration cap should be used so one symbol cannot dominate `S^` aggregate profit, trade count, or drawdown?
+11. What concentration cap should be used so one candidate cannot dominate `S^` aggregate profit, trade count, or drawdown?
+12. How should EURUSD-source selection bias be measured after cross-symbol `IS + VAL` and OOS filtering?
+13. For FTMO evaluation, should report-level max drawdown remain only a coarse sanity filter while final ranking comes from rolling challenge simulations?
+14. Provisional FTMO grading decision: rank by single-stage pass rate first, then breach behavior, consistency warnings, median pass duration, average pass duration, fee economics, and losing-streak distribution. Minimum viable evaluation pass rate is currently `>= 75%`, with `>= 85%` preferred because challenge and verification pass rates compound. Funded-stage payout should be evaluated as survival/profitability rather than another `+10%` first-passage target.
+15. Goal realignment set on `2026-06-14` and refined on `2026-06-21`: evaluation/challenge mode and funded mode may use different strategies. Challenge mode should be treated as account acquisition, targeting `+10%` before breach with pass rate prioritized over raw speed. Funded mode should target lower-risk `1% -> 3%` monthly extraction and account survival.
+16. Challenge-mode analysis should report expected challenge-fee cost per pass, losing-streak distribution over `10` attempts, unresolved starts, daily/global breach frequency, and consistency-rule warnings. Current fixed assumptions are `100,000` account size, `GBP 500` challenge fee, refund on first payout, and maximum modeled retries/loss streak of `10`.
+17. Funded-mode analysis should report monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months instead of using fast `+10%` pass speed.
+18. Promising `S^` portfolios should be stress-tested with cost/spread assumptions, trade-skip or Monte Carlo perturbations, and shifted windows before being treated as robust.
+19. OANDA personal-account track decision: `OANDA-EURXAU-P2012` is the current lead same-manifold candidate for `EURUSD + XAUUSD`. Its source optimizer identity is pass `2012`. Remaining work is operational validation rather than broad optimization: tiny live/demo forward test, deployment preset check, lot-step feasibility, news pause policy, and duplicate-order guard review.
 
 ## Behavior Cluster Research
 

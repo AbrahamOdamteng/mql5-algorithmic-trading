@@ -15,6 +15,7 @@ It includes:
 
 On initialization, the EA:
 
+- Resolves the active high/low period from `g_HighLowPeriodOptimizationIndex` and `g_HighLowPeriod`.
 - Allocates impulse and pullback circular buffers.
 - Loads up to 70,000 historical bars with `CopyRates`.
 - Processes historical closed bars from oldest to newest.
@@ -38,6 +39,7 @@ It includes the same shared WeekHighLows modules, plus direct inclusion of `rate
 
 On initialization, the indicator:
 
+- Resolves the active high/low period from `g_HighLowPeriodOptimizationIndex` and `g_HighLowPeriod`.
 - Allocates impulse and pullback buffers.
 - Does not pre-load history itself; it works from `OnCalculate` arrays.
 
@@ -60,6 +62,7 @@ On calculation, the indicator:
 
 `Include/WeekHighLows/week_functions.mqh` handles:
 
+- Mapping the optimizer-safe high/low period index to the active `ENUM_TIMEFRAMES` value.
 - Creating new period data.
 - Detecting a new period.
 - Updating current period high/low/close.
@@ -89,6 +92,24 @@ On calculation, the indicator:
 - Deactivation of level rays after price hits them.
 
 `Include/WeekHighLows/utils.mqh` provides append helpers and simple array access helpers.
+
+## High/Low Period Selection
+
+The EA and indicator keep `g_HighLowPeriod` as the fixed-period input. They also expose `g_HighLowPeriodOptimizationIndex` so MT5 genetic optimization can sweep a contiguous integer range instead of raw `ENUM_TIMEFRAMES` values.
+
+Mapping:
+
+| Index | Active period |
+| ---: | --- |
+| `-1` | Use fixed `g_HighLowPeriod` |
+| `0` | `PERIOD_H4` |
+| `1` | `PERIOD_H6` |
+| `2` | `PERIOD_H8` |
+| `3` | `PERIOD_H12` |
+| `4` | `PERIOD_D1` |
+| `5` | `PERIOD_W1` |
+
+For genetic optimization over the supported periods, use `g_HighLowPeriodOptimizationIndex=4||0||1||5||Y`. For fixed legacy presets, leave it disabled at `-1`.
 
 ## EA Utilities
 

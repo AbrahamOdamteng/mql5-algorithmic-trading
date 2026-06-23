@@ -14,9 +14,21 @@ The active EA signal path is clustered impulse continuation.
 
 ## Period Detection
 
-The code currently detects new periods using `IsNewPeriod(..., PERIOD_W1)`.
+The code detects new periods using `IsNewPeriod(..., g_ActiveHighLowPeriod)`.
 
-This means the current implementation is weekly high/low logic.
+`g_ActiveHighLowPeriod` is resolved in `OnInit()` from `g_HighLowPeriodOptimizationIndex` and `g_HighLowPeriod`. The default fixed period is `PERIOD_D1`; optimizer index values can select `H4`, `H6`, `H8`, `H12`, `D1`, or `W1`.
+
+Supported optimizer mapping:
+
+| Index | Active period |
+| ---: | --- |
+| `-1` | Use fixed `g_HighLowPeriod` |
+| `0` | `PERIOD_H4` |
+| `1` | `PERIOD_H6` |
+| `2` | `PERIOD_H8` |
+| `3` | `PERIOD_H12` |
+| `4` | `PERIOD_D1` |
+| `5` | `PERIOD_W1` |
 
 Relevant locations:
 
