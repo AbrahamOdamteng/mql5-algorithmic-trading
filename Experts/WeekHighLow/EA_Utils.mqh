@@ -11,6 +11,11 @@ enum TradeStrategy{
    REVERSE_ON_STOP
 };
 
+enum TradeDirectionMode{
+   TRADE_DIRECTION_CONTINUATION = 0,
+   TRADE_DIRECTION_REVERSAL = 1
+};
+
 double CalculateLotSize(double riskAmount,
                         double entryPrice,
                         double stopLossPrice)
@@ -177,9 +182,9 @@ double Calculate_Lot_Size_V3(double riskPercentage,
 
 
 
-void PlacePendingOrder(PriceCluster &cluster, WeekData &weeks[], CTrade &trade, int takeProfitMultiplier, double atrVal, double riskPercentage){
+void PlacePendingOrder(PriceCluster &cluster, WeekData &weeks[], CTrade &trade, int takeProfitMultiplier, double atrVal, double riskPercentage, int tradeDirectionMode){
 
-   placeImpulseContinuationOrders(cluster, weeks,trade,takeProfitMultiplier, atrVal, riskPercentage);
+   placeImpulseContinuationOrders(cluster, weeks,trade,takeProfitMultiplier, atrVal, riskPercentage, tradeDirectionMode);
 }
 
 
@@ -466,7 +471,7 @@ double NormalizePrice(double price)
 }
 
 
-void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  CTrade &trade, int takeProfitMultiplier, double atrVal, double riskPercentage){
+void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  CTrade &trade, int takeProfitMultiplier, double atrVal, double riskPercentage, int tradeDirectionMode){
 
    Print(
       "SYMBOL_FILLING_MODE=",
@@ -529,6 +534,14 @@ void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  C
    double shortStopLoss   = cluster.seedLevel.price; 
    double shortTakeProfit = shortEntryPrice - (takeProfitMultiplier * MathAbs(shortStopLoss - shortEntryPrice ));
 
+   double reversalShortEntryPrice = cluster.seedLevel.price + atrVal;
+   double reversalShortStopLoss   = reversalShortEntryPrice + atrVal;
+   double reversalShortTakeProfit = reversalShortEntryPrice - (takeProfitMultiplier * MathAbs(reversalShortStopLoss - reversalShortEntryPrice));
+
+   double reversalLongEntryPrice = cluster.seedLevel.price - atrVal;
+   double reversalLongStopLoss   = reversalLongEntryPrice - atrVal;
+   double reversalLongTakeProfit = reversalLongEntryPrice + (takeProfitMultiplier * MathAbs(reversalLongEntryPrice - reversalLongStopLoss));
+
    longEntryPrice = NormalizePrice(longEntryPrice);
    longStopLoss   = NormalizePrice(longStopLoss);
    longTakeProfit = NormalizePrice(longTakeProfit);
@@ -536,6 +549,14 @@ void placeImpulseContinuationOrders(PriceCluster &cluster, WeekData &weeks[],  C
    shortEntryPrice   = NormalizePrice(shortEntryPrice);
    shortStopLoss     = NormalizePrice(shortStopLoss);
    shortTakeProfit   = NormalizePrice(shortTakeProfit);
+
+   reversalShortEntryPrice   = NormalizePrice(reversalShortEntryPrice);
+   reversalShortStopLoss     = NormalizePrice(reversalShortStopLoss);
+   reversalShortTakeProfit   = NormalizePrice(reversalShortTakeProfit);
+
+   reversalLongEntryPrice   = NormalizePrice(reversalLongEntryPrice);
+   reversalLongStopLoss     = NormalizePrice(reversalLongStopLoss);
+   reversalLongTakeProfit   = NormalizePrice(reversalLongTakeProfit);
 
 
    double volume          = 0.0;
@@ -595,46 +616,127 @@ if(shortTpDistance < minStopDistance)
    return;
 }
 
+   double reversalShortEntryDistance = MathAbs(reversalShortEntryPrice - reversalShortStopLoss);
+   double reversalShortTpDistance = MathAbs(reversalShortTakeProfit - reversalShortEntryPrice);
+
+   double reversalLongEntryDistance = MathAbs(reversalLongEntryPrice - reversalLongStopLoss);
+   double reversalLongTpDistance = MathAbs(reversalLongTakeProfit - reversalLongEntryPrice);
+
+   if(reversalShortEntryDistance < minStopDistance)
+   {
+      Print(
+         "INVALID REVERSAL SHORT SL DISTANCE | ",
+         "Required=", minStopDistance,
+         " Actual=", reversalShortEntryDistance
+      );
+
+      return;
+   }
+
+   if(reversalShortTpDistance < minStopDistance)
+   {
+      Print(
+         "INVALID REVERSAL SHORT TP DISTANCE | ",
+         "Required=", minStopDistance,
+         " Actual=", reversalShortTpDistance
+      );
+
+      return;
+   }
+
+   if(reversalLongEntryDistance < minStopDistance)
+   {
+      Print(
+         "INVALID REVERSAL LONG SL DISTANCE | ",
+         "Required=", minStopDistance,
+         " Actual=", reversalLongEntryDistance
+      );
+
+      return;
+   }
+
+   if(reversalLongTpDistance < minStopDistance)
+   {
+      Print(
+         "INVALID REVERSAL LONG TP DISTANCE | ",
+         "Required=", minStopDistance,
+         " Actual=", reversalLongTpDistance
+      );
+
+      return;
+   }
+
    WeekData wd = weeks[cluster.seedLevel.weekNumber];
    if(wd.weekNumber != cluster.seedLevel.weekNumber){
       Print("Error!!!!: wd.weekNumber != cluster.seedLevel.weekNumber");
       WeekData error = weeks[1000000];
    }
 
-   if(cluster.seedLevel.lineType == WEEK_HIGH){
-      volume = Calculate_Lot_Size_V3(riskPercentage, longEntryPrice, longStopLoss);
+    if(cluster.seedLevel.lineType == WEEK_HIGH){
       string comment = tradeComment(wd.highTime, "H", wd.highImpulse, wd.highPullback,cluster);
 
-      PrintOrderDistances(longEntryPrice,longStopLoss, longTakeProfit);
+      if(tradeDirectionMode == TRADE_DIRECTION_REVERSAL){
+         volume = Calculate_Lot_Size_V3(riskPercentage, reversalShortEntryPrice, reversalShortStopLoss);
+         PrintOrderDistances(reversalShortEntryPrice,reversalShortStopLoss, reversalShortTakeProfit);
 
-      bool success = trade.BuyStop(volume, longEntryPrice,_Symbol,longStopLoss,longTakeProfit,ORDER_TIME_GTC,0,comment );
+         bool success = trade.SellLimit(volume, reversalShortEntryPrice,_Symbol,reversalShortStopLoss,reversalShortTakeProfit,ORDER_TIME_GTC,0,comment );
 
-      if (success){
-         Print("Buy Stop placed successfully^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+         if (success){
+            Print("Sell Limit placed successfully for high reversal");
+         }else{
+            Print("Failed to place order");
+            Print("Volume: ", volume);
+            Print("Retcode: ", trade.ResultRetcode());
+            Print("Description: ", trade.ResultRetcodeDescription());
+         }
       }else{
-         Print("Failed to place order");
-         Print("Volume: ", volume);
-         Print("Retcode: ", trade.ResultRetcode());
-         Print("Description: ", trade.ResultRetcodeDescription());
+         volume = Calculate_Lot_Size_V3(riskPercentage, longEntryPrice, longStopLoss);
+         PrintOrderDistances(longEntryPrice,longStopLoss, longTakeProfit);
+
+         bool success = trade.BuyStop(volume, longEntryPrice,_Symbol,longStopLoss,longTakeProfit,ORDER_TIME_GTC,0,comment );
+
+         if (success){
+            Print("Buy Stop placed successfully^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+         }else{
+            Print("Failed to place order");
+            Print("Volume: ", volume);
+            Print("Retcode: ", trade.ResultRetcode());
+            Print("Description: ", trade.ResultRetcodeDescription());
+         }
       }
-   } else {
-
-      volume = Calculate_Lot_Size_V3(riskPercentage, shortEntryPrice, shortStopLoss);
-
+    } else {
       string comment = tradeComment(wd.lowTime, "L", wd.lowImpulse, wd.lowPullback,cluster);
-      PrintOrderDistances(shortEntryPrice, shortStopLoss, shortTakeProfit);
 
-      bool success = trade.SellStop(volume, shortEntryPrice,_Symbol,shortStopLoss,shortTakeProfit,ORDER_TIME_GTC,0,comment);
+      if(tradeDirectionMode == TRADE_DIRECTION_REVERSAL){
+         volume = Calculate_Lot_Size_V3(riskPercentage, reversalLongEntryPrice, reversalLongStopLoss);
+         PrintOrderDistances(reversalLongEntryPrice, reversalLongStopLoss, reversalLongTakeProfit);
 
-      if (success){
-         Print("Sell Stop placed successfully^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+         bool success = trade.BuyLimit(volume, reversalLongEntryPrice,_Symbol,reversalLongStopLoss,reversalLongTakeProfit,ORDER_TIME_GTC,0,comment);
+
+         if (success){
+            Print("Buy Limit placed successfully for low reversal");
+         }else{
+            Print("Failed to place order");
+            Print("Volume: ", volume);
+            Print("Retcode: ", trade.ResultRetcode());
+            Print("Description: ", trade.ResultRetcodeDescription());
+         }
       }else{
-         Print("Failed to place order");
-         Print("Volume: ", volume);
-         Print("Retcode: ", trade.ResultRetcode());
-         Print("Description: ", trade.ResultRetcodeDescription());
+         volume = Calculate_Lot_Size_V3(riskPercentage, shortEntryPrice, shortStopLoss);
+         PrintOrderDistances(shortEntryPrice, shortStopLoss, shortTakeProfit);
+
+         bool success = trade.SellStop(volume, shortEntryPrice,_Symbol,shortStopLoss,shortTakeProfit,ORDER_TIME_GTC,0,comment);
+
+         if (success){
+            Print("Sell Stop placed successfully^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+         }else{
+            Print("Failed to place order");
+            Print("Volume: ", volume);
+            Print("Retcode: ", trade.ResultRetcode());
+            Print("Description: ", trade.ResultRetcodeDescription());
+         }
       }
-   }
+    }
 }
 
 

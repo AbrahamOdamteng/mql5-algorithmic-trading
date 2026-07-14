@@ -35,6 +35,7 @@ input double  g_MinPullback_ATR_multiplier = 0.5;
 
 input int     g_TakeProfitMultiplier    = 2;
 input double  g_Risk_Percentage         = 1.0;
+input int     g_TradeDirectionMode      = 0; // 0=continuation, 1=reversal
 input bool    g_EnableTradeCsvLogging   = true;
 input string  g_TradeCsvManifoldId      = "";
 input string  g_TradeCsvTestId          = "";
@@ -194,7 +195,7 @@ void OnTick()
       PriceCluster last = GetLast(g_clusterHighs);
       WeekData lastWeek = GetSecondToLast(g_weekData);
       double stopLossDistance = lastWeek.weeklyATR * g_ATR_StopLoss_multiplier;
-      PlacePendingOrder(last, g_weekData,g_trade, g_TakeProfitMultiplier, stopLossDistance, g_Risk_Percentage);
+      PlacePendingOrder(last, g_weekData,g_trade, g_TakeProfitMultiplier, stopLossDistance, g_Risk_Percentage, g_TradeDirectionMode);
     }
 
     if(lowClusterDetected){
@@ -202,7 +203,7 @@ void OnTick()
       PriceCluster last = GetLast(g_clusterLows);
       WeekData lastWeek = GetSecondToLast(g_weekData);
       double stopLossDistance = lastWeek.weeklyATR * g_ATR_StopLoss_multiplier;
-      PlacePendingOrder(last,g_weekData, g_trade, g_TakeProfitMultiplier,stopLossDistance, g_Risk_Percentage);
+      PlacePendingOrder(last,g_weekData, g_trade, g_TakeProfitMultiplier,stopLossDistance, g_Risk_Percentage, g_TradeDirectionMode);
     }
    
   }
