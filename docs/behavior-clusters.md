@@ -2,6 +2,8 @@
 
 This document extends the existing fixed-manifold workflow. It does not replace the prior approach of testing one parameter manifold across multiple symbols. The new idea is to test whether each symbol has one or more robust local strategy families, then build the FTMO portfolio from behaviorally distinct `symbol + cluster` strategy units.
 
+A separate rolling-manifold research branch is now also under consideration. That branch does not require a manifold to work indefinitely. Instead, it tests whether a manifold discovered on a rolling historical window can be traded briefly while fresh, then retired and replaced by the next discovered manifold.
+
 ## Motivation
 
 The previous robustness check looked for a single parameter manifold that could work across a diverse symbol basket. That is a strong test, but it may be too restrictive because FX pairs, metals, indices, and energy can have genuinely different market structure.
@@ -57,6 +59,24 @@ Use the existing time segmentation, but change what is discovered and selected.
 9. Run rolling FTMO first-passage analysis on the frozen portfolio.
 
 The important constraint is that OOS and FTMO replay must not be used to discover the clusters. They are used to judge the frozen selection.
+
+## Rolling Manifold Workflow
+
+This is a separate hypothesis from the behavior-cluster workflow and should be evaluated independently.
+
+Proposed process:
+
+1. Run genetic optimization on `EURUSD` over a rolling `5`-year discovery window.
+2. Select the top `X` manifolds using profit, drawdown, profit/DD, trade count, and concentration checks rather than raw optimizer profit alone.
+3. Test those top `X` manifolds on non-EURUSD symbols over the same discovery window as a weak sanity filter.
+4. Reject only obvious non-transferable or catastrophic manifolds at this stage.
+5. Test surviving manifolds across non-EURUSD symbols in a short validation slice immediately after the discovery window.
+6. Promote only manifolds with enough cross-symbol confirmation in the validation slice.
+7. Trade each promoted manifold only for a fixed short horizon such as `N` weeks, `N` closed trades, or whichever comes first.
+8. Roll the discovery window forward and repeat.
+9. Evaluate the stitched sequence of promoted manifolds as a live-like walk-forward system.
+
+The purpose is to test short-lived edge rotation rather than indefinite robustness. Non-EURUSD checks during the discovery window are weak sanity filters, not the main selector. The validation slice is the real freshness and transferability check, not a new optimization period. The final score should be based on the entire rolling sequence, including skipped windows where no manifold qualifies.
 
 ## Parameter Distance
 

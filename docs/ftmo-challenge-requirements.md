@@ -175,3 +175,21 @@ The fast strategy-generation workflow should favor candidates with:
 - Robustness across shifted windows and execution-cost stress after initial screening.
 
 Do not reject a candidate only because it is not the fastest. Reject it if it cannot pass often enough, breaches too often, depends on one outsized event, or remains unresolved too frequently.
+
+## Rolling Manifold Research Branch
+
+Challenge-stage research may also test short-horizon manifold rotation. This branch assumes a manifold may only be useful for a few weeks or months, rather than indefinitely.
+
+Record rolling-manifold experiments in `rolling-manifold-experiment-log.md`.
+
+Initial workflow:
+
+1. Genetically optimize on `EURUSD` over a rolling `5`-year discovery window.
+2. Select the top `X` manifolds using quality filters, not raw profit alone.
+3. Test those manifolds on non-EURUSD symbols over the same discovery window as a weak sanity filter.
+4. Reject obvious non-transferable or catastrophic manifolds, but do not require indefinite broad-market robustness at this stage.
+5. Screen surviving manifolds across non-EURUSD symbols in a short validation slice after the discovery window.
+6. Trade successful manifolds only for `N` weeks, `N` closed trades, or a hybrid limit.
+7. Roll forward and repeat.
+
+The promoted result is the stitched walk-forward process. Do not judge this branch by the best individual window or by indefinite full-period performance of one selected manifold.

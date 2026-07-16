@@ -1,8 +1,35 @@
-# Week High Low Project Notes
+# MQL5 Strategy Project Notes
 
-This directory captures working knowledge for the WeekHighLow EA and indicator so future sessions can quickly recover project context.
+This directory captures working knowledge for the active MQL5 strategy work and the legacy WeekHighLow research so future sessions can quickly recover project context.
+
+## Current Direction
+
+As of `2026-07-15`, the day/week high-low strategy is abandoned for new development.
+
+The active strategy direction is the Three Day Trend Signal strategy, originally coded as a PineScript indicator:
+
+```text
+C:\Users\abraham\AppData\Roaming\MetaQuotes\Terminal\Common\Files\3 Day Trend Signal with ATR Candle Filter.txt
+```
+
+The MQL5 implementation should be built incrementally in `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`. The current instruction is to draw chart symbols first and not place trades.
+
+Current implementation state:
+
+- ATR momentum candle markers are implemented.
+- Relative volume is not implemented yet.
+- The three-day trend filter is not implemented yet.
+- Final long/short signal triangles are not implemented yet.
+- Order placement is intentionally not implemented.
+
+See `three-day-trend-signal.md` for the active strategy details.
 
 ## Primary Files
+
+- `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`: Active EA for the new strategy. It currently draws ATR momentum markers only and places no trades.
+- `docs/three-day-trend-signal.md`: Active strategy notes and implementation sequence.
+
+Legacy WeekHighLow files, retained for reference unless explicitly revisited:
 
 - `Experts/WeekHighLow/WeekHighLowEA.mq5`: Expert Advisor that warms up historical bars, detects signals on new closed bars, and places pending orders.
 - `Indicators/WeekHighLow/WeekHighLowIndicator.mq5`: Chart indicator that draws levels and signal markers.
@@ -10,7 +37,9 @@ This directory captures working knowledge for the WeekHighLow EA and indicator s
 - `Experts/WeekHighLow/EA_Utils.mqh`: EA order placement, lot sizing, comments, and strategy helper functions.
 - `Experts/WeekHighLow/TradeLogger.mqh`: CSV trade logging support, currently compiled in but inactive from the EA.
 
-## Strategy Intent As Discovered
+## Legacy WeekHighLow Strategy Intent
+
+The notes below describe the abandoned WeekHighLow strategy and historical research context. Do not treat them as the default current work.
 
 The project appears to track previous period highs and lows, measure impulse and pullback behavior around those levels, detect continuation-style setups, and place pending breakout orders around the detected level.
 
@@ -28,7 +57,7 @@ High/low period selector mapping:
 | `4` | `PERIOD_D1` |
 | `5` | `PERIOD_W1` |
 
-## Current Goal
+## Legacy FTMO/OANDA Research Context
 
 The practical goal is to develop an EA configuration that can help pass an FTMO-style challenge.
 
@@ -43,6 +72,10 @@ This goal realignment does not delete the older robustness goals. The fixed-mani
 The intended deployment is multi-symbol: a single parameter manifold should eventually be tested across multiple symbols and symbol types, including FX, metals, and indices. If the same manifold performs acceptably across a diverse subset of markets, that is treated as stronger evidence of robustness than a single-symbol result.
 
 New research extension: a symbol-specific behavior-cluster workflow is also being considered. Instead of requiring one global manifold to work across all symbols, each symbol may earn inclusion by showing multiple distinct profitable behavior clusters. A live portfolio would then be built from `symbol + behavior cluster` strategy units, with one random or median representative chosen from each accepted cluster. This is documented in `behavior-clusters.md` and does not delete or replace the older fixed-manifold workflow.
+
+New rolling-manifold research extension: the project should also test whether short-lived parameter manifolds can be rotated instead of finding one manifold that works indefinitely. The proposed workflow is to run genetic discovery on `EURUSD` over rolling `5`-year windows, select the top `X` manifolds, apply a weak non-EURUSD sanity filter over the same discovery window, then use a short non-EURUSD validation slice as the real promotion gate. Each successful manifold is traded only for a limited forward period such as `N` weeks or `N` closed trades before re-optimizing. This does not replace the fixed-manifold or behavior-cluster workflows; it is a separate hypothesis that may fit challenge-stage account acquisition better than indefinite deployment.
+
+For future assistant sessions, start with `session-start.md` instead of reading every markdown file. It lists the current lightweight context files and identifies large historical files that should only be read with targeted searches.
 
 ## Current OANDA Personal-Account Plan
 
@@ -196,6 +229,18 @@ Immediate next workflow:
 - Evaluate aggregate trade count and portfolio suitability on `S^`, not by applying a per-candidate `< 100` trade elimination rule.
 - Audit `S^` for survivor-luck risk, symbol concentration, candidate concentration, and path-dependent FTMO/funded performance before promotion.
 
+Rolling-manifold workflow to test next as a separate branch:
+
+- Optimize `EURUSD` over a rolling `5`-year discovery window.
+- Keep the top `X` manifolds using quality filters rather than raw optimizer profit alone.
+- Test those top `X` manifolds on non-EURUSD symbols over the same `5`-year discovery window as a weak sanity filter only.
+- Use the sanity filter to reject obvious non-transferable or catastrophic manifolds, not to demand indefinite broad-market robustness.
+- Validate surviving manifolds on non-EURUSD symbols in a short unseen slice after the discovery window.
+- Promote only manifolds that show enough non-EURUSD confirmation in the validation slice.
+- Trade the promoted manifold for only `N` weeks, `N` closed trades, or a hybrid limit such as whichever comes first.
+- Roll the optimization window forward and repeat, evaluating the stitched sequence as a live-like walk-forward test.
+- Treat the final score as the whole rolling process, not the best individual optimized window.
+
 Provisional FTMO grading:
 
 | Grade | Pass rate | Median pass duration | Average pass duration |
@@ -210,12 +255,15 @@ Use `C` as the provisional minimum viable FTMO grade and `B` as the preferred mi
 ## Documentation Files
 
 - `architecture.md`: How the EA, indicator, and include files fit together.
+- `session-start.md`: Lightweight session bootstrap file explaining which docs to read first and which large historical files to avoid by default.
+- `three-day-trend-signal.md`: Active strategy notes, marker mapping, and implementation sequence.
 - `signal-flow.md`: Current signal and order placement flow.
 - `ftmo-challenge-requirements.md`: Current pass-rate-first requirements for challenge-stage strategy generation and replay.
 - `behavior-clusters.md`: Proposed symbol-specific parameter-family and trade-behavior cluster workflow for finding distinct strategy units.
 - `discovery-findings.md`: Important findings, risks, and mismatches found during discovery.
 - `open-questions.md`: Decisions that need clarification before larger changes.
 - `experiment-log.md`: Legacy mixed running log of experiments and outcomes. Do not update it unless explicitly asked.
+- `rolling-manifold-experiment-log.md`: Dedicated log for rolling short-horizon manifold rotation research.
 - `ftmo-challenge-experiment-log.md`: Dedicated log for FTMO challenge-stage pass-rate-first research.
 - `ftmo-funded-experiment-log.md`: Dedicated log for FTMO funded-stage survival, payout, and monthly-return research.
 - `utils/README.md`: Reusable PowerShell utilities for parsing MT5 optimizer/forward XML files and fixed OOS `.xml.htm` reports.

@@ -1,6 +1,27 @@
 # Architecture
 
-## EA
+## Current Active EA
+
+`Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5` is the active entry point for new strategy work.
+
+It currently implements chart drawing only:
+
+- Creates an ATR handle with `iATR(_Symbol, _Period, g_ATR_Period)`.
+- Draws historical ATR momentum candle markers during `OnInit()`.
+- On each new bar, evaluates the latest closed candle and draws a marker if the momentum condition passes.
+- Does not include trade classes or place orders.
+
+Current implemented momentum condition:
+
+```text
+abs(current close - open from contiguousCandles - 1 bars ago) >= ATR(14) * ATR Multiplier
+```
+
+When building the contiguous candle block, the EA excludes older candles beyond the first adjacent high/low range gap greater than `ATR * GAP_ATR_SKIP_FRACTION`, with `GAP_ATR_SKIP_FRACTION = 0.1` hardcoded in the EA.
+
+Legacy WeekHighLow architecture is retained below for reference only.
+
+## Legacy WeekHighLow EA
 
 `Experts/WeekHighLow/WeekHighLowEA.mq5` is the trading entry point.
 
@@ -31,7 +52,7 @@ On each tick, the EA:
 - Calls `DetectClusteredImpulseContinuationSignal()` for highs and lows.
 - Places a pending order when a signal is detected.
 
-## Indicator
+## Legacy WeekHighLow Indicator
 
 `Indicators/WeekHighLow/WeekHighLowIndicator.mq5` is the chart visualization entry point.
 
@@ -52,7 +73,7 @@ On calculation, the indicator:
 - Updates period/high/low state.
 - Calls `detectImpulseSignal()` rather than the EA's active `DetectClusteredImpulseContinuationSignal()`.
 
-## Shared Include Modules
+## Legacy WeekHighLow Shared Include Modules
 
 `Include/WeekHighLows/datatypes.mqh` defines core structs:
 
@@ -93,7 +114,7 @@ On calculation, the indicator:
 
 `Include/WeekHighLows/utils.mqh` provides append helpers and simple array access helpers.
 
-## High/Low Period Selection
+## Legacy High/Low Period Selection
 
 The EA and indicator keep `g_HighLowPeriod` as the fixed-period input. They also expose `g_HighLowPeriodOptimizationIndex` so MT5 genetic optimization can sweep a contiguous integer range instead of raw `ENUM_TIMEFRAMES` values.
 
@@ -111,7 +132,7 @@ Mapping:
 
 For genetic optimization over the supported periods, use `g_HighLowPeriodOptimizationIndex=4||0||1||5||Y`. For fixed legacy presets, leave it disabled at `-1`.
 
-## EA Utilities
+## Legacy WeekHighLow EA Utilities
 
 `Experts/WeekHighLow/EA_Utils.mqh` contains several strategy/order helper versions, but the active path is:
 
@@ -120,7 +141,7 @@ For genetic optimization over the supported periods, use `g_HighLowPeriodOptimiz
 
 The active order path calculates entry, stop, and take profit around the seed level using `atrVal`, normalizes prices, checks minimum stop distances, calculates volume, and places `BuyStop` or `SellStop` orders.
 
-## Trade Logger
+## Legacy WeekHighLow Trade Logger
 
 `Experts/WeekHighLow/TradeLogger.mqh` can open a common CSV file, write trade events, and flush output.
 

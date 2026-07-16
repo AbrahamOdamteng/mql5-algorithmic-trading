@@ -160,6 +160,56 @@ Required analysis capabilities:
 - Select random or median representatives from accepted behavior clusters.
 - Replay portfolios built from `symbol + behavior cluster` units against challenge `+10%`, verification `+5%`, daily loss, global loss, pass-rate-first grading, and consistency diagnostics.
 
+## Rolling Manifold Cycle Runner
+
+Use `Files/WeekHighLow/Run-RollingManifoldCycle.ps1` to run one configurable loop of the rolling short-horizon manifold workflow.
+
+Safe preparation example, which creates the optimizer config and stops if the optimizer XML does not already exist:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\WeekHighLow\Run-RollingManifoldCycle.ps1 `
+  -CycleId RM_2012Q1 `
+  -OptimizationStart 2007.01.01 `
+  -OptimizationEnd 2012.01.01 `
+  -ValidationStart 2012.01.01 `
+  -ValidationEnd 2012.02.01 `
+  -DeployStart 2012.02.01 `
+  -DeployEnd 2012.05.01 `
+  -PrepareOnly
+```
+
+Normal run example:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\WeekHighLow\Run-RollingManifoldCycle.ps1 `
+  -CycleId RM_2012Q2_STRICT `
+  -OptimizationStart 2007.01.01 `
+  -OptimizationEnd 2012.01.01 `
+  -ValidationStart 2012.01.01 `
+  -ValidationEnd 2012.04.01 `
+  -DeployStart 2012.04.01 `
+  -DeployEnd 2012.07.01 `
+  -TopCandidateCount 25 `
+  -MaxCandidatesAfterSanity 10 `
+  -ValidationMinPassingSymbols 2 `
+  -MaxRuntimeMinutes 10
+```
+
+The script selects final `m^` after validation, not immediately after optimization-window cross-symbol testing. Optimization-window non-EURUSD tests are weak sanity filters only. Deployment tests enable CSV logging and write an expected common-files CSV named `manifold_trades_<m^>.csv` for later FTMO replay.
+
+Current stricter defaults require the discovery symbol to pass validation and require at least `2` validation-passing symbols. Use `-AllowValidationWithoutDiscoverySymbol` only for diagnostic runs where EURUSD is not required to remain in `S^`.
+
+Useful options:
+
+- `-ExistingOptimizerXml` reuses a completed optimizer spreadsheet instead of running genetic optimization.
+- `-SkipOptimizationRun` requires an existing optimizer XML and skips the optimizer launch.
+- `-SkipFixedRuns` analyzes existing fixed reports without launching new fixed tests.
+- `-MaxTests` runs only a limited number of fixed tests in the current session; rerun the same command to resume.
+- `-RunExistingReports` reruns tests even when reports already exist.
+- `-Symbols` overrides the default FX28 symbol universe.
+- `-SanityRequireDiscoverySymbol` requires `EURUSD` to pass the sanity stage.
+- `-AllowValidationWithoutDiscoverySymbol` disables the default requirement that `EURUSD` must pass validation.
+
 ## Notes
 
 - Files in `docs/results` are treated as ephemeral working artifacts.

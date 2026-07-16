@@ -35,6 +35,15 @@ Each entry should include:
 
 ## Entries
 
+### 2026-07-14 - Rolling Short-Horizon Manifold Research Goal
+
+- Goal: Add a new challenge-stage research branch that tests rotating short-lived manifolds instead of requiring one manifold to work indefinitely.
+- Change or experiment: Documented a proposed rolling workflow: optimize `EURUSD` over a rolling `5`-year window, select top `X` manifolds, screen them across other symbols, then trade successful manifolds only for `N` weeks or `N` closed trades before rolling forward and re-optimizing.
+- Change or experiment: Refined the cross-symbol role: non-EURUSD checks inside the `5`-year discovery window are weak sanity filters only, while the short non-EURUSD validation slice after discovery is the real promotion gate.
+- Test setup: Documentation-only change; no MT5 tests run.
+- Outcome: The rolling-manifold idea is now captured as a separate branch alongside the existing fixed-manifold and behavior-cluster workflows.
+- Decision or next step: Future rolling-manifold experiments should be recorded in `rolling-manifold-experiment-log.md`. Define `X`, validation-slice length, deployment horizon, weak discovery-window sanity filters, cross-symbol validation promotion gates, and how skipped windows should count in the stitched walk-forward score.
+
 ### 2026-06-21 - Challenge Requirements Split From Funded Mode
 
 - Goal: Make FTMO challenge-stage research independent from funded-stage strategy requirements.

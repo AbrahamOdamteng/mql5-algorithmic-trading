@@ -1,6 +1,36 @@
 # Signal Flow
 
-## Current EA Flow
+## Current Three Day Trend Signal Flow
+
+The active new EA is `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`.
+
+Current implemented flow:
+
+1. Create an ATR indicator handle on initialization.
+2. Optionally delete prior objects with the `TDTS_Momentum_` prefix.
+3. Scan recent historical bars and draw ATR momentum markers.
+4. On each new chart bar, evaluate the latest closed bar.
+5. Draw a blue circle above the bar for bullish ATR momentum.
+6. Draw a red circle below the bar for bearish ATR momentum.
+
+Current momentum condition:
+
+```text
+abs(current close - open from contiguousCandles - 1 bars ago) >= ATR(14) * ATR Multiplier
+```
+
+Before drawing a marker, the EA builds the contiguous candle block from newest to oldest and stops before the first adjacent high/low range gap greater than `ATR * GAP_ATR_SKIP_FRACTION`. The fraction is a hardcoded named constant set to `0.1`.
+
+Not implemented yet:
+
+- Relative volume markers.
+- Three-day trend filter.
+- Final long/short signal triangles.
+- Any order placement.
+
+The older WeekHighLow signal flow below is legacy reference only.
+
+## Legacy WeekHighLow EA Flow
 
 The active EA signal path is clustered impulse continuation.
 
@@ -12,7 +42,7 @@ The active EA signal path is clustered impulse continuation.
 6. If a high signal is detected, take the last high cluster and call `PlacePendingOrder()`.
 7. If a low signal is detected, take the last low cluster and call `PlacePendingOrder()`.
 
-## Period Detection
+## Legacy WeekHighLow Period Detection
 
 The code detects new periods using `IsNewPeriod(..., g_ActiveHighLowPeriod)`.
 
@@ -36,7 +66,7 @@ Relevant locations:
 - `Include/WeekHighLows/week_functions.mqh`: `detectWeekHighLows()`
 - `Include/WeekHighLows/cluster_logic.mqh`: cluster and signal functions
 
-## Impulse Logic
+## Legacy WeekHighLow Impulse Logic
 
 The circular buffer calculates impulse from recent bars.
 
@@ -56,7 +86,7 @@ For a low impulse:
 - Track the highest high seen before that break.
 - Impulse is highest high minus current low.
 
-## Pullback Logic
+## Legacy WeekHighLow Pullback Logic
 
 Pullbacks are calculated when a prior high or low reaches the oldest position in the pullback buffer.
 
@@ -74,7 +104,7 @@ For a low pullback:
 - Stop if the low is breached.
 - Track the maximum rise from the low to a later high.
 
-## Active Clustered Signal Logic
+## Legacy WeekHighLow Active Clustered Signal Logic
 
 `DetectClusteredImpulseContinuationSignal()` works from the last completed period.
 
@@ -91,7 +121,7 @@ It:
 
 Important note: the active path requires a minimum pullback with `actualPullback >= requiredPullback`, while V1 used a maximum pullback rule with `actualPullback <= maxPullback`.
 
-## Active Order Logic
+## Legacy WeekHighLow Active Order Logic
 
 `PlacePendingOrder()` delegates to `placeImpulseContinuationOrders()`.
 
@@ -111,7 +141,7 @@ For a low signal:
 
 The active lot sizing call uses `g_Risk_Percentage` via `Calculate_Lot_Size_V3()`.
 
-## Indicator Flow Difference
+## Legacy WeekHighLow Indicator Flow Difference
 
 The indicator currently calls `detectImpulseSignal()` rather than the EA's active `DetectClusteredImpulseContinuationSignal()`.
 

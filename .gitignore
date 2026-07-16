@@ -10,6 +10,8 @@
 # ===== EXPERT ADVISORS =====
 !Experts/WeekHighLow/
 !Experts/WeekHighLow/**
+!Experts/ThreeDayTrendSignal/
+!Experts/ThreeDayTrendSignal/**
 
 
 # Indicators

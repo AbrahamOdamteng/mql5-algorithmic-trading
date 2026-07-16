@@ -2,24 +2,33 @@
 
 These are the decisions that should be clarified before larger refactors or strategy changes.
 
-## Strategy Definition
+## Three Day Trend Signal
+
+1. Confirm the visual marker placement should remain above bullish momentum bars and below bearish momentum bars, matching the PineScript's relative locations.
+2. Confirm whether the MQL5 relative volume implementation should use tick volume or real volume when both are available.
+3. Confirm how strictly relative volume should match the PineScript's same-intraday-bar lookback calculation across broker sessions and DST changes.
+4. Confirm whether final long/short signals should fire only on the first bar of a new broker day, matching `ta.change(time("D"))`, or on another session boundary.
+5. Confirm whether the EA should continue using closed candles only, even if the PineScript indicator plots on the currently forming bar in TradingView.
+6. Confirm whether order placement should remain disabled until all chart markers visually match the PineScript.
+
+## Legacy WeekHighLow Strategy Definition
 
 1. The active high/low period is now configurable and optimizer-selectable through `g_HighLowPeriodOptimizationIndex`. Supported optimizer values are `0 -> 5` for `H4`, `H6`, `H8`, `H12`, `D1`, and `W1`; `-1` preserves fixed `g_HighLowPeriod` behavior.
 2. Open naming question: should weekly-specific names such as `WeekData`, `WeekHighLow`, `detectWeeks()`, and `detectWeekHighLows()` be generalized from `Week*` to `Period*` in a future refactor?
 
-## Indicator Alignment
+## Legacy WeekHighLow Indicator Alignment
 
 1. Should the indicator mirror the EA's active `DetectClusteredImpulseContinuationSignal()` path?
 2. Should the indicator process only closed bars to match EA behavior?
 3. Should indicator object deletion be limited to this project's object prefixes?
 
-## Pullback Rule
+## Legacy WeekHighLow Pullback Rule
 
 1. The active V2 strategy treats pullback as a minimum required pullback: `actualPullback >= requiredPullback`.
 2. V1 used a maximum-pullback interpretation: `actualPullback <= maxPullback`.
 3. If V1 is revived, keep its maximum-pullback names separate from V2's minimum-pullback names.
 
-## Lookback Units
+## Legacy WeekHighLow Lookback Units
 
 1. Should impulse and pullback lookbacks be true hours across timeframes?
 2. Or should they be explicitly named as bar counts?
@@ -80,3 +89,16 @@ These are the decisions that should be clarified before larger refactors or stra
 8. How many random portfolio samples are needed before judging a symbol-specific cluster family robust?
 9. For the pass-rate-first FTMO objective, should two-stage challenge-plus-verification promotion require a minimum compounded success probability beyond the single-stage `>= 75%` hard gate and `>= 85%` preferred gate?
 10. How should evaluation-mode risk differ from funded-mode risk, given the funded-stage target is steady `1% -> 3%` monthly profit rather than another fast `+10%` first-passage target?
+
+## Rolling Manifold Research
+
+1. What exact rolling discovery window should be used first: fixed `5` years, shorter windows, or multiple window lengths?
+2. How many top manifolds should be selected from each EURUSD genetic run before cross-symbol screening?
+3. How long should the validation slice be before deployment: `2` weeks, `4` weeks, `1` month, or another period?
+4. Should the live-like forward deployment limit be based on `N` weeks, `N` closed trades, or a hybrid rule such as whichever comes first?
+5. What cross-symbol confirmation is required before a manifold is allowed into the forward deployment slice?
+6. What weak non-EURUSD sanity filters should be applied over the same `5`-year discovery window without turning the process back into indefinite broad-market manifold selection?
+7. Should non-EURUSD discovery-window checks use aggregate profit, symbol-count profitability, drawdown caps, trade-count minimums, concentration caps, or only catastrophic-failure rejection?
+8. How should skipped windows be scored when no manifold passes validation?
+9. Should the rolling process optimize for FTMO challenge pass rate, funded monthly survival, or keep separate challenge and funded rolling variants?
+10. What guardrails prevent the rolling process from becoming optimizer noise chasing, especially if the selected manifold changes every window?
