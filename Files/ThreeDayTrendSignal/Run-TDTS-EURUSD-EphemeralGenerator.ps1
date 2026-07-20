@@ -825,6 +825,7 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
 
   $oosRows = @(Read-ManifestReportRows -Manifest $oosManifest -ReportRoot $reportRoot)
   $oosRows | Export-Csv -LiteralPath $oosResultsPath -NoTypeInformation -Encoding ASCII
+  Write-Host "OOS metrics recorded for $($window.WindowId). OOS profitability is not a stop condition."
 
   $windowsProcessedThisSession++
 }

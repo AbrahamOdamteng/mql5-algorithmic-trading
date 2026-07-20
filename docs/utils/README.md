@@ -181,6 +181,7 @@ Restart behavior:
 - Rerun the same command to resume.
 - Completed optimizer XML files and fixed-test `.xml.htm` reports are skipped.
 - Validation ranking selects exactly one OOS candidate per completed window; it does not use a validation pass/fail filter that can select nothing.
+- Unprofitable OOS reports are recorded and do not stop the runner.
 
 Useful options:
 

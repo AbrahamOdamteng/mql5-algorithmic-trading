@@ -200,6 +200,8 @@ OOS results are for measurement only.
 
 Do not change filters, scoring, symbols, risk, window lengths, or acceptance rules based on OOS results from the same research process. Any process revision must be defined prospectively as a new version before evaluating its OOS.
 
+An OOS run may be unprofitable. That is recorded as data and must not stop the runner or prevent later rolling windows from executing. The generator process is being evaluated across all deployment dates, including failed OOS deployments.
+
 ## Open Implementation Detail
 
 The deterministic scoring algorithm must be fixed before the first full run of this process. It should rank validation survivors only, select one manifold per symbol, and avoid using OOS information directly or indirectly.
@@ -243,6 +245,7 @@ Restart behavior:
 - Existing validation and OOS fixed-test reports are skipped.
 - If the run is stopped during an optimizer, that monthly optimizer is rerun because no complete optimizer XML exists.
 - If the run is stopped during a fixed test, only the missing report is rerun.
+- Unprofitable OOS results are recorded and the runner continues to later windows. OOS profitability is not a stop condition.
 
 Useful throttle options:
 

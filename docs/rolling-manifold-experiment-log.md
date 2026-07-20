@@ -62,6 +62,7 @@ Each entry should include:
 - Test setup: Symbol `EURUSD`; timeframe `H1`; IS `5` years; validation `6` months; OOS `12` months; primary OOS horizon `3` months; rolling step `1` month; first OOS start `2005.07.01`; last OOS start `2025.05.01`; `239` monthly windows.
 - Selection rule: The runner ranks optimizer candidates by IS score, validates the top `25`, ranks all completed validation reports by deterministic validation score, and selects exactly one OOS candidate per window. No validation pass/fail filter can produce zero OOS candidates when validation reports exist.
 - OOS structure: Runs `OOS_0_90`, `OOS_91_180`, `OOS_181_270`, `OOS_271_360`, `OOS_0_180`, `OOS_0_270`, and `OOS_0_360` fixed tests for the selected manifold.
+- OOS discipline: Unprofitable OOS runs are recorded as failed deployment data and must not stop later rolling windows from running.
 - Outcome: PowerShell parser check passed. `PrepareOnly` dry run created `239` windows and did not launch MT5.
 - Decision or next step: Start the overnight run with `powershell -ExecutionPolicy Bypass -File .\Files\ThreeDayTrendSignal\Run-TDTS-EURUSD-EphemeralGenerator.ps1`; rerun the same command after any pause or stop to resume.
 
