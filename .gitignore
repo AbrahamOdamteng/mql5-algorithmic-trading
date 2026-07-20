@@ -26,6 +26,12 @@
 # Files
 !Files/WeekHighLow/
 !Files/WeekHighLow/**
+!Files/ThreeDayTrendSignal/
+!Files/ThreeDayTrendSignal/**
+
+# Tester presets
+!Profiles/Tester/
+!Profiles/Tester/ThreeDayTrendSignal*.set
 
 # Documentation
 !docs/

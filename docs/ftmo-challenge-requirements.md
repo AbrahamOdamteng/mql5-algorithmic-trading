@@ -176,20 +176,24 @@ The fast strategy-generation workflow should favor candidates with:
 
 Do not reject a candidate only because it is not the fastest. Reject it if it cannot pass often enough, breaches too often, depends on one outsized event, or remains unresolved too frequently.
 
-## Rolling Manifold Research Branch
+## Ephemeral Manifold Generator Branch
 
-Challenge-stage research may also test short-horizon manifold rotation. This branch assumes a manifold may only be useful for a few weeks or months, rather than indefinitely.
+Challenge-stage research should test whether a generator can repeatedly discover short-lived, symbol-specific manifolds. This branch assumes a manifold may only be useful for a few months and does not need to transfer across symbols.
 
-Record rolling-manifold experiments in `rolling-manifold-experiment-log.md`.
+Record the process definition in `ephemeral-manifold-generator.md` and rolling results in `rolling-manifold-experiment-log.md`.
+
+The generator process has its own hyperparameters, separate from EA parameters. IS duration, validation duration, rolling step size, OOS deployment duration, validation survivor count, filters, thresholds, and ranking algorithms should be compared as complete named process versions.
 
 Initial workflow:
 
-1. Genetically optimize on `EURUSD` over a rolling `5`-year discovery window.
-2. Select the top `X` manifolds using quality filters, not raw profit alone.
-3. Test those manifolds on non-EURUSD symbols over the same discovery window as a weak sanity filter.
-4. Reject obvious non-transferable or catastrophic manifolds, but do not require indefinite broad-market robustness at this stage.
-5. Screen surviving manifolds across non-EURUSD symbols in a short validation slice after the discovery window.
-6. Trade successful manifolds only for `N` weeks, `N` closed trades, or a hybrid limit.
-7. Roll forward and repeat.
+1. Run each symbol independently.
+2. Genetically optimize on the process version's IS window.
+3. Apply fixed IS filters.
+4. Validate survivors on the process version's validation window.
+5. Apply fixed validation filters.
+6. Rank validation survivors with a deterministic scoring algorithm.
+7. Select exactly one manifold for that symbol and freeze it.
+8. Evaluate frozen OOS decay over the process version's deployment/decay horizons.
+9. Advance the full IS, validation, and OOS structure by the process version's rolling step size and repeat.
 
-The promoted result is the stitched walk-forward process. Do not judge this branch by the best individual window or by indefinite full-period performance of one selected manifold.
+The promoted result is the generator process across many monthly deployment dates, not the best individual manifold. OOS results are measurement only and must not be used to tune the same process version.

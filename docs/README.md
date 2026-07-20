@@ -6,13 +6,13 @@ This directory captures working knowledge for the active MQL5 strategy work and 
 
 As of `2026-07-15`, the day/week high-low strategy is abandoned for new development.
 
-The active strategy direction is the Three Day Trend Signal strategy, originally coded as a PineScript indicator:
+The active strategy implementation is the Three Day Trend Signal strategy, originally coded as a PineScript indicator:
 
 ```text
 C:\Users\abraham\AppData\Roaming\MetaQuotes\Terminal\Common\Files\3 Day Trend Signal with ATR Candle Filter.txt
 ```
 
-The MQL5 implementation should be built incrementally in `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`. The current instruction is to draw chart symbols first and not place trades.
+The MQL5 implementation should be built incrementally in `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`. Momentum-circle market order execution has been added for genetic testing.
 
 Current implementation state:
 
@@ -20,13 +20,16 @@ Current implementation state:
 - Relative volume is not implemented yet.
 - The three-day trend filter is not implemented yet.
 - Final long/short signal triangles are not implemented yet.
-- Order placement is intentionally not implemented.
+- Optional market order placement is implemented for newly drawn ATR momentum circles for genetic testing.
+- Trade sizing uses fixed starting-balance risk, defaulting to `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0`, rather than fixed lots.
 
 See `three-day-trend-signal.md` for the active strategy details.
 
+The active research direction is now the Ephemeral Manifold Generator. The goal is no longer to find a forever manifold. The goal is to build and empirically optimize a repeatable per-symbol pipeline that discovers short-lived manifolds. Baseline hyperparameters are rolling `5`-year IS, `6`-month validation, deterministic selection of exactly one frozen manifold, and OOS decay measurement across `0-90`, `0-180`, `0-270`, and `0-360` day horizons. These are generator hyperparameters to test, not settled optimal values. See `ephemeral-manifold-generator.md`.
+
 ## Primary Files
 
-- `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`: Active EA for the new strategy. It currently draws ATR momentum markers only and places no trades.
+- `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`: Active EA for the new strategy. It currently draws ATR momentum markers and can place risk-sized market orders from newly drawn momentum circles.
 - `docs/three-day-trend-signal.md`: Active strategy notes and implementation sequence.
 
 Legacy WeekHighLow files, retained for reference unless explicitly revisited:
@@ -73,7 +76,7 @@ The intended deployment is multi-symbol: a single parameter manifold should even
 
 New research extension: a symbol-specific behavior-cluster workflow is also being considered. Instead of requiring one global manifold to work across all symbols, each symbol may earn inclusion by showing multiple distinct profitable behavior clusters. A live portfolio would then be built from `symbol + behavior cluster` strategy units, with one random or median representative chosen from each accepted cluster. This is documented in `behavior-clusters.md` and does not delete or replace the older fixed-manifold workflow.
 
-New rolling-manifold research extension: the project should also test whether short-lived parameter manifolds can be rotated instead of finding one manifold that works indefinitely. The proposed workflow is to run genetic discovery on `EURUSD` over rolling `5`-year windows, select the top `X` manifolds, apply a weak non-EURUSD sanity filter over the same discovery window, then use a short non-EURUSD validation slice as the real promotion gate. Each successful manifold is traded only for a limited forward period such as `N` weeks or `N` closed trades before re-optimizing. This does not replace the fixed-manifold or behavior-cluster workflows; it is a separate hypothesis that may fit challenge-stage account acquisition better than indefinite deployment.
+Current rolling research direction: the project should test whether a per-symbol generator can repeatedly discover short-lived profitable manifolds. There is no cross-symbol transfer requirement. Each symbol is optimized, validated, selected, frozen, and evaluated independently. Each monthly window selects at most one manifold per symbol; diversification comes from symbols, not multiple manifolds on one symbol. The generator and selection process are the product, not any one selected manifold.
 
 For future assistant sessions, start with `session-start.md` instead of reading every markdown file. It lists the current lightweight context files and identifies large historical files that should only be read with targeted searches.
 
@@ -104,31 +107,36 @@ Remaining live-readiness plan:
 
 Operational status: these remaining items are deployment safety checks, not new strategy discovery. Do not start new broad optimizations for this OANDA track unless `OANDA-EURXAU-P2012` fails live/demo execution validation or a specific new hypothesis is defined.
 
-Current cross-symbol candidate-promotion workflow:
+Current per-symbol generator workflow:
 
-- Use the EURUSD genetic backtest as the candidate generator.
-- Select the top `N` EURUSD candidates for fixed cross-symbol screening.
-- Run those top `N` candidates across the target symbol basket in in-sample plus validation.
-- Define `S*` as the subset that succeeds across the cross-symbol in-sample plus validation screen.
-- Run only `S*` in OOS.
-- Define `S^` as the subset of `S*` that also passes OOS.
-- Keep only `S^` for portfolio-level review and later FTMO/funded analysis.
+- Run each symbol independently.
+- Use the process version's IS optimization window.
+- Apply fixed IS filters.
+- Validate survivors on the process version's validation window.
+- Apply fixed validation filters.
+- Rank validation survivors with a deterministic scoring algorithm.
+- Select exactly one frozen manifold per symbol per monthly window.
+- Evaluate OOS decay over the process version's deployment/decay horizons without modifying the manifold.
+- Score the generator process across monthly deployment dates, including `no selection` windows.
 
-Low trade count on one candidate should not automatically reject it. Do not eliminate individual candidates only because they have fewer than `100` trades. Evaluate trade frequency using the aggregate trade count of the final OOS-passing subset `S^`.
+Low trade count remains a risk, but the trade-count rule must be part of the fixed IS filters, fixed validation filters, or deterministic scoring algorithm before OOS is measured.
 
-Current main uncertainty: EURUSD-generated manifolds may not represent transferable cross-symbol behavior. The `S*` -> `S^` workflow is a cleaner promotion gate, but it can still produce lucky survivors if EURUSD-specific candidates happen to pass a limited cross-symbol screen.
+Current main uncertainty: whether a fixed generator process can repeatedly select short-lived symbol-specific manifolds that survive long enough to pass FTMO challenge and verification stages without becoming optimizer noise chasing.
 
-Validation safeguards for `S^`:
+Validation safeguards for the generator:
 
-- Prefer `S^` to contain multiple surviving candidates, not just one standout manifold.
-- Check whether profit and drawdown quality are spread across several symbols instead of being dominated by one symbol.
-- Check whether one candidate contributes too much of the aggregate return or too much of the aggregate drawdown.
-- Treat enough aggregate trades as necessary but not sufficient; the trades must also be distributed across symbols and candidates.
+- Require filters and scoring to be fixed before OOS measurement.
+- Record skipped windows where no candidate survives validation.
+- Check whether portfolio performance is spread across symbols instead of dominated by one symbol.
+- Check whether one selected manifold contributes too much of aggregate return or drawdown in a deployment month.
+- Treat enough aggregate trades as necessary but not sufficient; trades must also be distributed across symbols and deployment windows.
 - Do not treat full-period OOS report profitability as equivalent to FTMO challenge passability. Challenge mode must be judged with rolling first-passage analysis: target before daily/global breach and within the desired time window.
 - For funded mode, judge monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months. Full-period OOS profit alone is not enough.
-- Stress promising `S^` portfolios with cost/spread assumptions, trade-skip or Monte Carlo tests, and shifted windows before treating them as robust.
+- Stress promising generator versions with cost/spread assumptions, trade-skip or Monte Carlo tests, and shifted windows before treating them as robust.
 
-## Test Plan
+## Legacy Fixed-Manifold Test Plan
+
+The fixed `2000 -> 2012`, `2012 -> 2018`, and `2018 -> 2026` split below belongs to the older fixed-manifold workflow. The active generator workflow uses rolling monthly `5`-year IS, `6`-month validation, and OOS decay horizons.
 
 - `2000 -> 2012`: In-sample period, tested by the MT5 optimizer.
 - `2012 -> 2018`: Validation period, tested by MT5 optimizer forward testing.
@@ -174,23 +182,23 @@ These probe dates are first EA trade/order events for one fixed manifold, not gu
 
 `US100` has a special history-availability exemption. It should not be used as a base optimization symbol and should not be penalized for missing the full `2000 -> 2012` in-sample window. The `2000 -> 2020` probe produced first trade/order activity at `2014.10.07 15:00:00`. For fixed-manifold validation, skip `US100` in-sample, use validation from available history around `2014.09.15 -> 2018.01.01`, and use normal OOS testing from `2018.01.01 -> 2026.05.31`.
 
-Backtest acceptance criteria:
+Legacy backtest acceptance criteria:
 
 - In-sample profit must be greater than `0`.
 - Validation profit must be greater than `0`.
 - Out-of-sample profit must be greater than `0`.
 - Equity drawdown must be less than `20%` in every test period.
 
-Current ratio-based review criteria:
+Legacy ratio-based review criteria:
 
 - Profit must be greater than `0` in every period.
 - Profit-to-drawdown ratio should be greater than `2.0` in every period.
 - Raw equity drawdown should remain capped, currently using `30%` as a diagnostic cap.
-- Trade count should be evaluated at the subset/portfolio level. Individual candidates are not eliminated only because they have fewer than `100` trades; the aggregate trade count of the final OOS-passing subset `S^` is the relevant frequency gate.
+- Trade count was evaluated at the subset/portfolio level. For the active generator, trade-count handling must be fixed in IS filters, validation filters, or deterministic scoring before OOS is measured.
 
 Legacy pre-CSV expanded-basket elimination filters:
 
-- These were frozen for the earlier full fixed-manifold expanded-basket workflow. The current EURUSD-generated `S*` -> `S^` workflow uses aggregate trade count on `S^` instead of per-candidate trade-count elimination.
+- These were frozen for the earlier full fixed-manifold expanded-basket workflow and do not define the active generator process.
 - Apply these only after the full fixed-manifold basket reports are generated, before spending time on trade CSV generation and FTMO rolling-challenge analysis.
 - Eliminate a manifold if any required report is missing or unparseable. `US100` IS is exempt because `US100` is validation/OOS-only.
 - Eliminate a manifold if total trades across all tested symbols and periods are `< 1500`.
@@ -222,24 +230,22 @@ FTMO-first evaluation plan:
 
 Immediate next workflow:
 
-- Review the latest EURUSD genetic backtest results and select top `N` candidates.
-- Generate fixed-test presets/configs for those top `N` candidates across the target symbol basket.
-- Run cross-symbol in-sample plus validation first, then form `S*` from successful candidates.
-- Run OOS only for `S*`, then form `S^` from OOS-passing candidates.
-- Evaluate aggregate trade count and portfolio suitability on `S^`, not by applying a per-candidate `< 100` trade elimination rule.
-- Audit `S^` for survivor-luck risk, symbol concentration, candidate concentration, and path-dependent FTMO/funded performance before promotion.
+- Define fixed IS filters.
+- Define fixed validation filters.
+- Define the deterministic scoring algorithm that selects exactly one manifold per symbol.
+- Define the initial generator hyperparameter grid, including IS duration, validation duration, OOS deployment duration, rolling step size, validation survivor count, filters, thresholds, and ranking algorithms.
+- Choose the initial symbol universe for the first full generator run.
+- Prepare or revise runner scripts so they execute the per-symbol monthly generator process.
+- Record OOS metrics by decay slice and cumulative horizon without using OOS to tune the same process version.
 
-Rolling-manifold workflow to test next as a separate branch:
+Active rolling-manifold workflow:
 
-- Optimize `EURUSD` over a rolling `5`-year discovery window.
-- Keep the top `X` manifolds using quality filters rather than raw optimizer profit alone.
-- Test those top `X` manifolds on non-EURUSD symbols over the same `5`-year discovery window as a weak sanity filter only.
-- Use the sanity filter to reject obvious non-transferable or catastrophic manifolds, not to demand indefinite broad-market robustness.
-- Validate surviving manifolds on non-EURUSD symbols in a short unseen slice after the discovery window.
-- Promote only manifolds that show enough non-EURUSD confirmation in the validation slice.
-- Trade the promoted manifold for only `N` weeks, `N` closed trades, or a hybrid limit such as whichever comes first.
-- Roll the optimization window forward and repeat, evaluating the stitched sequence as a live-like walk-forward test.
-- Treat the final score as the whole rolling process, not the best individual optimized window.
+- Run MT5 genetic optimisation separately per symbol over the process version's IS window.
+- Validate surviving candidates on the process version's validation window for the same symbol.
+- Select exactly one frozen manifold per symbol using deterministic validation scoring.
+- Advance the entire IS/VAL/OOS structure by the process version's rolling step size.
+- Evaluate frozen OOS decay over the process version's OOS deployment/decay horizons.
+- Treat the final score as generator performance across monthly deployment dates, not the best individual selected manifold.
 
 Provisional FTMO grading:
 
@@ -256,6 +262,7 @@ Use `C` as the provisional minimum viable FTMO grade and `B` as the preferred mi
 
 - `architecture.md`: How the EA, indicator, and include files fit together.
 - `session-start.md`: Lightweight session bootstrap file explaining which docs to read first and which large historical files to avoid by default.
+- `ephemeral-manifold-generator.md`: Active research process for per-symbol monthly rolling discovery of disposable short-lived manifolds.
 - `three-day-trend-signal.md`: Active strategy notes, marker mapping, and implementation sequence.
 - `signal-flow.md`: Current signal and order placement flow.
 - `ftmo-challenge-requirements.md`: Current pass-rate-first requirements for challenge-stage strategy generation and replay.

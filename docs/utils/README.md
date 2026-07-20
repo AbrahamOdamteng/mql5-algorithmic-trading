@@ -160,7 +160,38 @@ Required analysis capabilities:
 - Select random or median representatives from accepted behavior clusters.
 - Replay portfolios built from `symbol + behavior cluster` units against challenge `+10%`, verification `+5%`, daily loss, global loss, pass-rate-first grading, and consistency diagnostics.
 
-## Rolling Manifold Cycle Runner
+## TDTS EURUSD Ephemeral Generator Runner
+
+Use `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1` for the active EURUSD baseline generator run.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ThreeDayTrendSignal\Run-TDTS-EURUSD-EphemeralGenerator.ps1
+```
+
+Default hyperparameters:
+
+- IS: `5` years.
+- Validation: `6` months.
+- OOS: `12` months.
+- Primary OOS horizon: first `3` months.
+- Rolling step: `1` month.
+
+Restart behavior:
+
+- Rerun the same command to resume.
+- Completed optimizer XML files and fixed-test `.xml.htm` reports are skipped.
+- Validation ranking selects exactly one OOS candidate per completed window; it does not use a validation pass/fail filter that can select nothing.
+
+Useful options:
+
+- `-MaxWindows 1` limits the session to one monthly window.
+- `-MaxFixedTests 10` limits fixed validation/OOS tests in the current session.
+- `-StartAtWindow 25` starts scanning from a later monthly window.
+- `-PrepareOnly` writes the windows file and current optimizer config without launching MT5.
+
+Outputs are written under the terminal data folder in `reports\tdts_eg_eurusd_is5y_val6m_oos12m_step1m` by default.
+
+## Legacy Rolling Manifold Cycle Runner
 
 Use `Files/WeekHighLow/Run-RollingManifoldCycle.ps1` to run one configurable loop of the rolling short-horizon manifold workflow.
 
@@ -195,9 +226,11 @@ powershell -ExecutionPolicy Bypass -File .\Files\WeekHighLow\Run-RollingManifold
   -MaxRuntimeMinutes 10
 ```
 
+This runner belongs to the older EURUSD-discovery plus cross-symbol-promotion workflow. Treat it as legacy scaffolding unless it is revised for the active per-symbol Ephemeral Manifold Generator process.
+
 The script selects final `m^` after validation, not immediately after optimization-window cross-symbol testing. Optimization-window non-EURUSD tests are weak sanity filters only. Deployment tests enable CSV logging and write an expected common-files CSV named `manifold_trades_<m^>.csv` for later FTMO replay.
 
-Current stricter defaults require the discovery symbol to pass validation and require at least `2` validation-passing symbols. Use `-AllowValidationWithoutDiscoverySymbol` only for diagnostic runs where EURUSD is not required to remain in `S^`.
+The old stricter defaults require the discovery symbol to pass validation and require at least `2` validation-passing symbols. Use `-AllowValidationWithoutDiscoverySymbol` only for diagnostic runs where EURUSD is not required to remain in `S^`.
 
 Useful options:
 

@@ -1,0 +1,17 @@
+; saved on 2026.07.18
+; this file contains input parameters for testing/optimizing ThreeDayTrendSignalEA expert advisor
+; to use it in the strategy tester, click Load in the context menu of the Inputs tab
+;
+g_ATR_Period=14||7||7||49||Y
+g_ATR_Multiplier=5.0||2.0||0.5||10.0||Y
+g_ContiguousCandles=2||1||1||5||Y
+g_HistoryBarsToScan=2000||2000||1||2000||N
+g_MarkerSize=1||1||1||5||N
+g_DeleteObjectsOnInit=true||false||0||true||N
+g_EnableTrading=true||false||0||true||N
+g_StartingBalance=100000.0||100000.0||1000.0||100000.0||N
+g_RiskPercentOfBalance=1.0||1.0||0.25||2.0||N
+g_StopLossATRMultiple=1.0||0.5||0.25||5.0||Y
+g_TakeProfitSLMultiple=2.0||0.5||0.25||6.0||Y
+g_MagicNumber=3001001||3001001||1||3001001||N
+g_DeviationPoints=20||20||1||20||N

@@ -9,7 +9,7 @@ These are the decisions that should be clarified before larger refactors or stra
 3. Confirm how strictly relative volume should match the PineScript's same-intraday-bar lookback calculation across broker sessions and DST changes.
 4. Confirm whether final long/short signals should fire only on the first bar of a new broker day, matching `ta.change(time("D"))`, or on another session boundary.
 5. Confirm whether the EA should continue using closed candles only, even if the PineScript indicator plots on the currently forming bar in TradingView.
-6. Confirm whether order placement should remain disabled until all chart markers visually match the PineScript.
+6. Momentum-circle order placement has been explicitly enabled for genetic testing. Confirm whether final long/short signal order placement should remain disabled until all chart markers visually match the PineScript.
 
 ## Legacy WeekHighLow Strategy Definition
 
@@ -61,20 +61,20 @@ These are the decisions that should be clarified before larger refactors or stra
 2. Should optimizer inputs include ATR period and min cluster size, or are those intentionally fixed?
 3. Should M15 tests use adjusted lookback values if inputs remain bar counts?
 4. For genetic period optimization, should `g_HighLowPeriodOptimizationIndex=4||0||1||5||Y` become the standard preset line for new discovery runs, or should period optimization be enabled only for specific hypotheses?
-5. Current candidate-promotion workflow: use the EURUSD genetic backtest to select top `N` candidates, run those candidates across all target symbols in in-sample plus validation, define `S*` as the successful cross-symbol subset, run only `S*` in OOS, and keep `S^`, the subset of `S*` that passes OOS.
-6. Current trade-count rule: do not eliminate individual candidates only because they have fewer than `100` trades. Evaluate trade count using the aggregate trade count of `S^`, the final OOS-passing subset.
-7. Current phase-1 basket decision: use `EURUSD`, `GBPUSD`, `USDJPY`, `EURJPY`, `XAUUSD`, `XAGUSD`, `US500`, `US30`, `US100`, `UK100`, `USOIL`, and `UKOIL`. Only the FX symbols showed effective full `2000 -> 2012` start coverage in the start-date probe. Treat `US30`, `US500`, `UK100`, `XAUUSD`, `XAGUSD`, `USOIL`, and `UKOIL` as partial-history IS symbols. Treat `US100` as validation/OOS-only from available history and do not use it for optimization.
-8. What per-symbol loss or drawdown cap should be used so one symbol cannot dominate portfolio risk?
-9. How large must `S^` be before it is considered more than a lucky survivor set: at least `2`, `3`, or more independent candidates?
-10. What concentration cap should be used so one symbol cannot dominate `S^` aggregate profit, trade count, or drawdown?
-11. What concentration cap should be used so one candidate cannot dominate `S^` aggregate profit, trade count, or drawdown?
-12. How should EURUSD-source selection bias be measured after cross-symbol `IS + VAL` and OOS filtering?
+5. Current candidate-promotion workflow: use the Ephemeral Manifold Generator process in `ephemeral-manifold-generator.md`; do not use the older EURUSD-source `S*` -> `S^` cross-symbol promotion workflow unless explicitly revisiting legacy research.
+6. What trade-count floor or penalty should be included in fixed IS filters, fixed validation filters, or deterministic scoring before OOS is measured?
+7. What initial symbol universe should be used for per-symbol generator runs, given different symbols have different history availability?
+8. What per-symbol loss or drawdown cap should be used inside selection and portfolio evaluation?
+9. How should `no selection` windows be scored in generator-level statistics?
+10. What concentration cap should be used so one symbol cannot dominate aggregate generator profit, trade count, or drawdown?
+11. What concentration cap should be used so one monthly selected manifold cannot dominate aggregate generator profit or drawdown?
+12. How should deployment-date robustness be measured across monthly rolling starts?
 13. For FTMO evaluation, should report-level max drawdown remain only a coarse sanity filter while final ranking comes from rolling challenge simulations?
 14. Provisional FTMO grading decision: rank by single-stage pass rate first, then breach behavior, consistency warnings, median pass duration, average pass duration, fee economics, and losing-streak distribution. Minimum viable evaluation pass rate is currently `>= 75%`, with `>= 85%` preferred because challenge and verification pass rates compound. Funded-stage payout should be evaluated as survival/profitability rather than another `+10%` first-passage target.
 15. Goal realignment set on `2026-06-14` and refined on `2026-06-21`: evaluation/challenge mode and funded mode may use different strategies. Challenge mode should be treated as account acquisition, targeting `+10%` before breach with pass rate prioritized over raw speed. Funded mode should target lower-risk `1% -> 3%` monthly extraction and account survival.
 16. Challenge-mode analysis should report expected challenge-fee cost per pass, losing-streak distribution over `10` attempts, unresolved starts, daily/global breach frequency, and consistency-rule warnings. Current fixed assumptions are `100,000` account size, `GBP 500` challenge fee, refund on first payout, and maximum modeled retries/loss streak of `10`.
 17. Funded-mode analysis should report monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months instead of using fast `+10%` pass speed.
-18. Promising `S^` portfolios should be stress-tested with cost/spread assumptions, trade-skip or Monte Carlo perturbations, and shifted windows before being treated as robust.
+18. Promising generator-selected portfolios should be stress-tested with cost/spread assumptions, trade-skip or Monte Carlo perturbations, and shifted windows before being treated as robust.
 19. OANDA personal-account track decision: `OANDA-EURXAU-P2012` is the current lead same-manifold candidate for `EURUSD + XAUUSD`. Its source optimizer identity is pass `2012`. Remaining work is operational validation rather than broad optimization: tiny live/demo forward test, deployment preset check, lot-step feasibility, news pause policy, and duplicate-order guard review.
 
 ## Behavior Cluster Research
@@ -92,13 +92,19 @@ These are the decisions that should be clarified before larger refactors or stra
 
 ## Rolling Manifold Research
 
-1. What exact rolling discovery window should be used first: fixed `5` years, shorter windows, or multiple window lengths?
-2. How many top manifolds should be selected from each EURUSD genetic run before cross-symbol screening?
-3. How long should the validation slice be before deployment: `2` weeks, `4` weeks, `1` month, or another period?
-4. Should the live-like forward deployment limit be based on `N` weeks, `N` closed trades, or a hybrid rule such as whichever comes first?
-5. What cross-symbol confirmation is required before a manifold is allowed into the forward deployment slice?
-6. What weak non-EURUSD sanity filters should be applied over the same `5`-year discovery window without turning the process back into indefinite broad-market manifold selection?
-7. Should non-EURUSD discovery-window checks use aggregate profit, symbol-count profitability, drawdown caps, trade-count minimums, concentration caps, or only catastrophic-failure rejection?
-8. How should skipped windows be scored when no manifold passes validation?
-9. Should the rolling process optimize for FTMO challenge pass rate, funded monthly survival, or keep separate challenge and funded rolling variants?
-10. What guardrails prevent the rolling process from becoming optimizer noise chasing, especially if the selected manifold changes every window?
+1. The active research direction is now the Ephemeral Manifold Generator. The baseline process is per-symbol rolling `5`-year IS, `6`-month validation, monthly step, deterministic selection of exactly one frozen manifold, and OOS decay measurement through `360` days; these are generator hyperparameters to test empirically, not settled optimal values.
+2. Which IS durations should be compared first: `2y`, `3y`, `4y`, `5y`, `6y`, or another grid?
+3. Which validation durations should be compared first: `3m`, `6m`, `9m`, `12m`, or another grid?
+4. What OOS deployment and decay horizons should be compared when measuring manifold lifespan?
+5. What rolling step sizes should be compared, such as `1m`, `2m`, or `3m`?
+6. How many validation survivors should be retained before final ranking?
+7. What exact fixed IS filters should be applied after genetic optimisation?
+8. What exact fixed validation filters should be applied before deterministic ranking?
+9. What deterministic scoring algorithms should be compared for ranking validation survivors and selecting the single manifold per symbol?
+10. How should scoring handle low-trade validation survivors without using OOS information?
+11. How should skipped windows be scored when no candidate survives validation?
+12. Which initial symbol universe should be used for the first full generator run?
+13. Should challenge-mode and funded-mode generator variants use separate filters, scoring, and risk settings?
+14. What risk setting or risk sweep should be used when measuring `+5%`, `+10%`, daily breach, and `-10% first` outcomes for each OOS slice?
+15. How should portfolio-level FTMO replay combine one selected manifold per symbol while respecting the rule to never deploy multiple manifolds on the same symbol?
+16. What guardrails prevent the generator from becoming optimizer noise chasing, especially if the selected manifold changes every month?

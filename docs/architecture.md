@@ -4,12 +4,15 @@
 
 `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5` is the active entry point for new strategy work.
 
-It currently implements chart drawing only:
+It currently implements ATR momentum chart drawing and optional market-order execution:
 
 - Creates an ATR handle with `iATR(_Symbol, _Period, g_ATR_Period)`.
 - Draws historical ATR momentum candle markers during `OnInit()`.
 - On each new bar, evaluates the latest closed candle and draws a marker if the momentum condition passes.
-- Does not include trade classes or place orders.
+- Uses `CTrade` to place buy market orders from new bullish momentum circles and sell market orders from new bearish momentum circles when `g_EnableTrading` is true.
+- Sets stop loss from `ATR * g_StopLossATRMultiple` and take profit from stop distance times `g_TakeProfitSLMultiple`.
+- Calculates lot size from fixed starting-balance risk: `g_StartingBalance * g_RiskPercentOfBalance / 100.0`, divided by the one-lot loss at the stop price.
+- Does not trade historical markers drawn during initialization.
 
 Current implemented momentum condition:
 

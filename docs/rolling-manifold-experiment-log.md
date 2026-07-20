@@ -1,8 +1,8 @@
 # Rolling Manifold Experiment Log
 
-This file records experiments, code changes, tests, and observed outcomes for the rolling short-horizon manifold research branch.
+This file records experiments, code changes, tests, and observed outcomes for rolling short-horizon manifold research.
 
-Use this log for workflows that optimize on rolling historical windows, select temporary manifolds, validate them across non-EURUSD symbols, and deploy them only for limited forward horizons such as `N` weeks or `N` closed trades.
+Use this log for workflows that optimize on rolling historical windows, select temporary manifolds, and evaluate their limited forward lifespan.
 
 Do not use this file for the older indefinite fixed-manifold research, OANDA personal-account deployment notes, or funded-stage monthly-survival work unless the experiment directly supports rolling-manifold evaluation.
 
@@ -19,18 +19,63 @@ Each entry should include:
 
 ## Current Requirements Snapshot
 
-- Research branch: rolling short-horizon manifold rotation
-- Discovery symbol: `EURUSD`
-- Initial discovery window: rolling `5` years
-- Candidate source: top `X` EURUSD genetic manifolds, using quality filters rather than raw profit alone
-- Discovery-window cross-symbol role: weak non-EURUSD sanity filter only
-- Validation-window cross-symbol role: real promotion gate
-- Deployment horizon: unresolved; test `N` weeks, `N` closed trades, and hybrid limits
-- Final score: stitched walk-forward sequence, including skipped windows where no manifold qualifies
-- Challenge-stage relationship: intended to support FTMO pass-rate-first account-acquisition research
-- Canonical requirements file: `ftmo-challenge-requirements.md`
+- Research branch: Ephemeral Manifold Generator.
+- Canonical process file: `ephemeral-manifold-generator.md`.
+- Run each symbol independently.
+- Generator hyperparameters: IS duration, validation duration, OOS deployment duration, rolling step size, validation survivor count, IS filters, validation filters, thresholds, and ranking algorithm.
+- Baseline IS window: rolling `5` years.
+- Baseline validation window: next `6` months.
+- Baseline step size: `1` month.
+- Cross-symbol transfer requirement: none.
+- Selection: deterministic scoring over validation survivors, exactly one manifold per symbol per monthly window.
+- No-survivor behavior: record `no selection`; do not relax filters after seeing the failed window.
+- OOS structure: frozen manifold measured over `OOS-1` days `0-90`, `OOS-2` days `91-180`, `OOS-3` days `181-270`, and `OOS-4` days `271-360`.
+- Cumulative OOS horizons: `0-90`, `0-180`, `0-270`, and `0-360` days.
+- Portfolio rule: never deploy multiple manifolds on the same symbol in the same deployment period.
+- Final score: generator performance across monthly deployment dates, including skipped windows.
+- Challenge-stage relationship: intended to support FTMO challenge and verification pass-rate-first account acquisition, then funded-account profitability if manifolds remain useful.
+- OOS discipline: do not change the same process version based on OOS results.
+- Canonical FTMO requirements file: `ftmo-challenge-requirements.md`.
 
 ## Entries
+
+### 2026-07-20 - Research Direction Reset To Ephemeral Generator
+
+- Goal: Stop searching for a forever manifold and define the generator as the product.
+- Change or experiment: Added `docs/ephemeral-manifold-generator.md` as the canonical process definition and updated lightweight context docs to treat older EURUSD-discovery plus cross-symbol-promotion tests as historical diagnostics.
+- Test setup: Documentation-only change; no MT5 tests run.
+- Outcome: Future rolling research should run per symbol with `5`-year IS, `6`-month validation, deterministic selection of one frozen manifold, monthly window advancement, and OOS decay measurement through `360` days.
+- Decision or next step: Define the deterministic validation scoring algorithm and fixed IS/validation filters before launching the first full generator run.
+
+### 2026-07-20 - Generator Hyperparameters Defined As Research Target
+
+- Goal: Make the research pipeline itself the object of optimisation, separate from EA parameters.
+- Change or experiment: Documented generator hyperparameters including IS duration, validation duration, OOS deployment duration, rolling step size, validation survivor count, candidate ranking algorithm, validation thresholds, IS filters, and validation filters.
+- Test setup: Documentation-only change; no MT5 tests run.
+- Outcome: The baseline `5y` IS, `6m` validation, and `1m` step are now treated as one process version to compare empirically against alternatives such as `3y` IS or `3m` validation.
+- Decision or next step: Define named process versions and compare whole-pipeline performance rather than changing individual settings based on OOS from the same version.
+
+### 2026-07-20 - EURUSD Baseline Overnight Runner Prepared
+
+- Goal: Prepare a restartable overnight run for the active EURUSD ephemeral-generator baseline.
+- Change or experiment: Added `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1` and generated `Files/ThreeDayTrendSignal/tdts_ephemeral_optimizer_current.ini` with `PrepareOnly`.
+- Test setup: Symbol `EURUSD`; timeframe `H1`; IS `5` years; validation `6` months; OOS `12` months; primary OOS horizon `3` months; rolling step `1` month; first OOS start `2005.07.01`; last OOS start `2025.05.01`; `239` monthly windows.
+- Selection rule: The runner ranks optimizer candidates by IS score, validates the top `25`, ranks all completed validation reports by deterministic validation score, and selects exactly one OOS candidate per window. No validation pass/fail filter can produce zero OOS candidates when validation reports exist.
+- OOS structure: Runs `OOS_0_90`, `OOS_91_180`, `OOS_181_270`, `OOS_271_360`, `OOS_0_180`, `OOS_0_270`, and `OOS_0_360` fixed tests for the selected manifold.
+- Outcome: PowerShell parser check passed. `PrepareOnly` dry run created `239` windows and did not launch MT5.
+- Decision or next step: Start the overnight run with `powershell -ExecutionPolicy Bypass -File .\Files\ThreeDayTrendSignal\Run-TDTS-EURUSD-EphemeralGenerator.ps1`; rerun the same command after any pause or stop to resume.
+
+### 2026-07-20 - TDTS RM 2018 5Y/1Y/1Y First Corrected Cycle
+
+- Goal: Test the Three Day Trend Signal momentum-circle EA under the short-lived rolling-manifold hypothesis instead of the old long-lived fixed-manifold workflow.
+- Change or experiment: Updated `Files/ThreeDayTrendSignal/Run-TDTS-WalkForwardRestartable.ps1` so it can run a EURUSD genetic optimizer over a rolling discovery window, select candidates from optimizer-only IS results, validate candidate-symbol pairs over a one-year slice, then run OOS only for pairs that pass both IS and validation.
+- Test setup: Experiment `tdts_rm_2018_5y_1y_1y`; discovery symbol `EURUSD`; optimization `2012.01.01 -> 2017.01.01`; validation `2017.01.01 -> 2018.01.01`; OOS/deployment `2018.01.01 -> 2019.01.01`; FX28 symbol universe; `TopN=25`; fixed-balance sizing with `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0`.
+- Outcome: `25` EURUSD optimizer candidates selected, `1400` IS/VAL fixed tests completed, `234` IS/VAL rows accepted, `21` candidate-symbol pairs promoted to OOS, `9` OOS rows were profitable, and `1` OOS row met the acceptance gate.
+- Accepted OOS strategy unit: `TDTS_Pass262` on `EURUSD`, with OOS profit `15,178.89`, equity DD `7.28%`, ratio `2.085`, `48` trades, and profit factor `1.45`. Parameters: `g_ATR_Period=49`, `g_ATR_Multiplier=2.5`, `g_ContiguousCandles=1`, `g_StopLossATRMultiple=1.75`, `g_TakeProfitSLMultiple=3.25`.
+- `TDTS_Pass262` path: IS profit `114,683.84`, DD `15.20%`, ratio `7.545`, `350` trades; validation profit `30,421.41`, DD `5.82%`, ratio `5.227`, `45` trades; OOS profit `15,178.89`, DD `7.28%`, ratio `2.085`, `48` trades.
+- Portfolio-level diagnostic: trading all `21` promoted pairs would have lost `-19,411.34` in aggregate OOS; positive OOS rows summed to `72,278.11`, while negative OOS rows summed to `-91,689.45`.
+- Interpretation: The short-lived workflow is not a blanket failure because it found one accepted OOS unit, but the promotion gate is too permissive for trading every promoted pair. The result supports continuing rolling-cycle tests while tightening selection or portfolio construction rules.
+- Decision or next step: Run the next cycle as `2013.01.01 -> 2018.01.01` optimization, `2018.01.01 -> 2019.01.01` validation, and `2019.01.01 -> 2020.01.01` OOS. Do not treat the earlier long `2018 -> 2026` TDTS OOS run as the rolling-manifold result; it is only a long-lived-manifold diagnostic.
 
 ### 2026-07-14 - RM_2012Q2 Strict Reuse-Optimizer Calibration Result
 

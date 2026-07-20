@@ -12,6 +12,10 @@ Current implemented flow:
 4. On each new chart bar, evaluate the latest closed bar.
 5. Draw a blue circle above the bar for bullish ATR momentum.
 6. Draw a red circle below the bar for bearish ATR momentum.
+7. If trading is enabled and a new circle was drawn, place a matching market order.
+8. Set stop loss from `ATR * g_StopLossATRMultiple`.
+9. Set take profit from stop distance times `g_TakeProfitSLMultiple`.
+10. Calculate volume from fixed starting-balance risk using `g_StartingBalance` and `g_RiskPercentOfBalance`.
 
 Current momentum condition:
 
@@ -26,7 +30,7 @@ Not implemented yet:
 - Relative volume markers.
 - Three-day trend filter.
 - Final long/short signal triangles.
-- Any order placement.
+- Final-signal order placement.
 
 The older WeekHighLow signal flow below is legacy reference only.
 

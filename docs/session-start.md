@@ -10,6 +10,7 @@ Read these files first:
 
 - `docs/README.md`
 - `docs/three-day-trend-signal.md`
+- `docs/ephemeral-manifold-generator.md`
 - `docs/open-questions.md`
 
 For FTMO challenge or funded-account analysis, also read:
@@ -50,7 +51,9 @@ Use the focused log that matches the task:
 
 ## Current Main Research Direction
 
-The current active strategy direction is the Three Day Trend Signal strategy from the PineScript indicator in the terminal common files folder.
+The current active strategy implementation is the Three Day Trend Signal strategy from the PineScript indicator in the terminal common files folder.
+
+The current active research direction is the Ephemeral Manifold Generator. The generator/pipeline is the product; selected manifolds are disposable. The baseline process is per-symbol, monthly rolling `5`-year IS plus `6`-month validation, deterministic selection of exactly one frozen manifold per symbol, and decay measurement over `0-90`, `0-180`, `0-270`, and `0-360` OOS horizons. These are generator hyperparameters to test empirically, not settled optimal values.
 
 The previous day/week high-low strategy and the rolling-manifold branch are legacy research unless the user explicitly asks to revisit them.
 
@@ -61,6 +64,12 @@ Current implementation process:
 3. Implement ATR momentum candle markers first.
 4. Add relative volume markers next.
 5. Add the daily trend filter and final signal triangles after visual marker behavior is confirmed.
-6. Add trade logic only after explicit user approval.
+6. Trade logic has been explicitly approved for momentum-circle genetic testing.
 
-Current MQL5 state: `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5` implements ATR momentum candle markers only, compiles cleanly, and places no trades.
+Current MQL5 state: `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5` implements ATR momentum candle markers and optional market orders on newly drawn momentum circles. Trade sizing now uses fixed starting-balance risk via `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0` by default, not fixed lots. Relative volume, daily trend filter, and final long/short signal triangles are not implemented yet.
+
+Latest compile status: after fixed-balance risk sizing was added, MetaEditor compiled `ThreeDayTrendSignalEA.mq5` with `0 errors, 0 warnings`.
+
+Important testing note: the `2026-07-18` EURUSD H1 genetic results in `docs/experiment-log.md` used the older fixed `0.10` lot sizing. Rerun the genetic test after the risk-sizing change before treating candidate rankings as current.
+
+Latest rolling-manifold testing note: `tdts_rm_2018_5y_1y_1y` belongs to the older EURUSD-discovery plus cross-symbol-promotion framing. Keep it as historical evidence only. Future rolling research should use the per-symbol ephemeral-generator process in `docs/ephemeral-manifold-generator.md` unless the user explicitly asks to revisit the older branch.
