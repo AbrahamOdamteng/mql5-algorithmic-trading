@@ -97,10 +97,10 @@ OOS results from one process version may be used to design a later process versi
 
 Run the process independently for each symbol.
 
-Baseline window lengths for the first process version:
+Baseline window lengths for the current process version:
 
-- IS: `5` years.
-- VAL: `6` months.
+- IS: `36` months.
+- VAL: `3` months.
 - Step size: `1` month.
 
 These are starting hyperparameters, not settled optimal values.
@@ -114,7 +114,7 @@ For each symbol and monthly window:
 5. Rank validation survivors with a deterministic scoring algorithm.
 6. Select exactly one manifold from the ranked survivors.
 7. Freeze that manifold.
-8. Run every OOS period without modifying the manifold.
+8. Run the OOS period without modifying the manifold.
 9. Record all required metrics.
 10. Never change the research process based on OOS results.
 
@@ -130,8 +130,8 @@ Example:
 
 | Run | IS | VAL | OOS starts |
 | --- | --- | --- | --- |
-| `1` | `Jan2000-Dec2004` | `Jan2005-Jun2005` | `Jul2005` |
-| `2` | `Feb2000-Jan2005` | `Feb2005-Jul2005` | `Aug2005` |
+| `1` | `Jan2000-Dec2002` | `Jan2003-Mar2003` | `Apr2003` |
+| `2` | `Feb2000-Jan2003` | `Feb2003-Apr2003` | `May2003` |
 
 Reason: live trading could begin in any month. Monthly rolling tests measure sensitivity to deployment start date.
 
@@ -139,31 +139,22 @@ Reason: live trading could begin in any month. Monthly rolling tests measure sen
 
 The selected manifold remains completely frozen across all OOS slices.
 
-The baseline process version measures decay using these forward slices:
+The baseline process version measures the selected manifold over this forward slice:
 
 | Period | Horizon |
 | --- | --- |
 | `OOS-1` | Months `1-3`, days `0-90` |
-| `OOS-2` | Months `4-6`, days `91-180` |
-| `OOS-3` | Months `7-9`, days `181-270` |
-| `OOS-4` | Months `10-12`, days `271-360` |
 
-Also record cumulative performance:
-
-- Days `0-90`.
-- Days `0-180`.
-- Days `0-270`.
-- Days `0-360`.
+Also record cumulative performance for days `0-90`.
 
 Interpretation:
 
 - `OOS-1` is the likely live deployment period.
-- `OOS-2` through `OOS-4` measure manifold lifespan and decay.
-- The empirical replacement cadence should come from the decay profile, not from assumptions about how long a manifold should last.
+- The empirical replacement cadence should come from measured forward performance, not from assumptions about how long a manifold should last.
 
 ## Required OOS Metrics
 
-Record these for every OOS slice and cumulative horizon:
+Record these for the OOS slice and cumulative horizon:
 
 - Return.
 - Max drawdown.
@@ -214,15 +205,15 @@ Default process version:
 
 - Symbol: `EURUSD`.
 - Timeframe: `H1`.
-- IS: `5` years.
-- Validation: `6` months.
-- OOS: `12` months.
+- IS: `36` months.
+- Validation: `3` months.
+- OOS: `3` months.
 - Primary deployment horizon: first `3` OOS months.
-- Alpha-decay diagnostics: remaining `9` OOS months, plus cumulative `0-180`, `0-270`, and `0-360` reports.
+- Alpha-decay diagnostics beyond the first `3` OOS months are disabled for this process version.
 - Step size: `1` month.
-- First OOS start: `2005.07.01`.
+- First OOS start: `2020.07.01`.
 - Last OOS start: `2025.05.01`.
-- Total windows: `239`.
+- Total windows: `59`.
 
 Validation selection rule:
 

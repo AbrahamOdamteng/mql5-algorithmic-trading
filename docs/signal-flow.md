@@ -8,14 +8,17 @@ Current implemented flow:
 
 1. Create an ATR indicator handle on initialization.
 2. Optionally delete prior objects with the `TDTS_Momentum_` prefix.
-3. Scan recent historical bars and draw ATR momentum markers.
+3. Scan recent historical bars and draw ATR momentum and relative-volume markers.
 4. On each new chart bar, evaluate the latest closed bar.
-5. Draw a blue circle above the bar for bullish ATR momentum.
-6. Draw a red circle below the bar for bearish ATR momentum.
-7. If trading is enabled and a new circle was drawn, place a matching market order.
-8. Set stop loss from `ATR * g_StopLossATRMultiple`.
-9. Set take profit from stop distance times `g_TakeProfitSLMultiple`.
-10. Calculate volume from fixed starting-balance risk using `g_StartingBalance` and `g_RiskPercentOfBalance`.
+5. Draw a blue circle above the bar for bullish ATR momentum without relative volume.
+6. Draw a red circle below the bar for bearish ATR momentum without relative volume.
+7. Draw an orange diamond above the bar for relative volume without ATR momentum.
+8. Draw an aqua square above the bar for bullish ATR momentum plus relative volume.
+9. Draw a purple square below the bar for bearish ATR momentum plus relative volume.
+10. If trading is enabled and a new momentum marker was drawn, place a matching market order.
+11. Set stop loss from `ATR * g_StopLossATRMultiple`.
+12. Set take profit from stop distance times `g_TakeProfitSLMultiple`.
+13. Calculate volume from fixed starting-balance risk using `g_StartingBalance` and `g_RiskPercentOfBalance`.
 
 Current momentum condition:
 
@@ -25,9 +28,14 @@ abs(current close - open from contiguousCandles - 1 bars ago) >= ATR(14) * ATR M
 
 Before drawing a marker, the EA builds the contiguous candle block from newest to oldest and stops before the first adjacent high/low range gap greater than `ATR * GAP_ATR_SKIP_FRACTION`. The fraction is a hardcoded named constant set to `0.1`.
 
+Relative volume condition:
+
+```text
+sum(current-bar tick volume / average same-intraday-slot tick volume over relVolLength prior days, relVolCandles bars) >= relVolThreshold
+```
+
 Not implemented yet:
 
-- Relative volume markers.
 - Three-day trend filter.
 - Final long/short signal triangles.
 - Final-signal order placement.

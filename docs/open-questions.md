@@ -5,7 +5,7 @@ These are the decisions that should be clarified before larger refactors or stra
 ## Three Day Trend Signal
 
 1. Confirm the visual marker placement should remain above bullish momentum bars and below bearish momentum bars, matching the PineScript's relative locations.
-2. Confirm whether the MQL5 relative volume implementation should use tick volume or real volume when both are available.
+2. Relative volume is currently implemented with tick volume, matching the practical MT5 `volume` equivalent for FX/CFD symbols. Revisit only if a specific symbol has reliable real volume and should differ from the current behavior.
 3. Confirm how strictly relative volume should match the PineScript's same-intraday-bar lookback calculation across broker sessions and DST changes.
 4. Confirm whether final long/short signals should fire only on the first bar of a new broker day, matching `ta.change(time("D"))`, or on another session boundary.
 5. Confirm whether the EA should continue using closed candles only, even if the PineScript indicator plots on the currently forming bar in TradingView.
@@ -92,7 +92,7 @@ These are the decisions that should be clarified before larger refactors or stra
 
 ## Rolling Manifold Research
 
-1. The active research direction is now the Ephemeral Manifold Generator. The baseline process is per-symbol rolling `5`-year IS, `6`-month validation, monthly step, deterministic selection of exactly one frozen manifold, and OOS decay measurement through `360` days; these are generator hyperparameters to test empirically, not settled optimal values.
+1. The active research direction is now the Ephemeral Manifold Generator. The baseline process is per-symbol rolling `36`-month IS, `3`-month validation, monthly step, deterministic selection of exactly one frozen manifold, and OOS measurement through `90` days; these are generator hyperparameters to test empirically, not settled optimal values.
 2. Which IS durations should be compared first: `2y`, `3y`, `4y`, `5y`, `6y`, or another grid?
 3. Which validation durations should be compared first: `3m`, `6m`, `9m`, `12m`, or another grid?
 4. What OOS deployment and decay horizons should be compared when measuring manifold lifespan?

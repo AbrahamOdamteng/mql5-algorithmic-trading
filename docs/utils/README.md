@@ -170,9 +170,9 @@ powershell -ExecutionPolicy Bypass -File .\Files\ThreeDayTrendSignal\Run-TDTS-EU
 
 Default hyperparameters:
 
-- IS: `5` years.
-- Validation: `6` months.
-- OOS: `12` months.
+- IS: `36` months.
+- Validation: `3` months.
+- OOS: `3` months.
 - Primary OOS horizon: first `3` months.
 - Rolling step: `1` month.
 
@@ -190,7 +190,7 @@ Useful options:
 - `-StartAtWindow 25` starts scanning from a later monthly window.
 - `-PrepareOnly` writes the windows file and current optimizer config without launching MT5.
 
-Outputs are written under the terminal data folder in `reports\tdts_eg_eurusd_is5y_val6m_oos12m_step1m` by default.
+Outputs are written under the terminal data folder in `reports\tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m` by default.
 
 ## Legacy Rolling Manifold Cycle Runner
 

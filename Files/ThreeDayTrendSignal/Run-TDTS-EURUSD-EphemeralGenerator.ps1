@@ -1,16 +1,16 @@
 param(
   [string]$TerminalPath = 'C:\Program Files\MetaTrader 5\terminal64.exe',
-  [string]$ExperimentId = 'tdts_eg_eurusd_is5y_val6m_oos12m_step1m',
+  [string]$ExperimentId = 'tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m',
   [string]$Symbol = 'EURUSD',
   [string]$Period = 'H1',
   [string]$TemplateSetFile = 'ThreeDayTrendSignal_EURUSD_Genetic_20260718.set',
   [string]$TempSetFile = 'ThreeDayTrendSignal_WalkForward_Current.set',
   [string]$TempConfigPath = (Join-Path $PSScriptRoot 'tdts_ephemeral_generator_current.ini'),
-  [datetime]$FirstOosStart = '2005-07-01',
+  [datetime]$FirstOosStart = '2020-07-01',
   [datetime]$LastOosStart = '2025-05-01',
-  [int]$ISYears = 5,
-  [int]$ValidationMonths = 6,
-  [int]$OosMonths = 12,
+  [int]$ISMonths = 36,
+  [int]$ValidationMonths = 3,
+  [int]$OosMonths = 3,
   [int]$PrimaryOosMonths = 3,
   [int]$StepMonths = 1,
   [int]$TopOptimizerCandidates = 25,
@@ -252,7 +252,7 @@ function New-Windows {
   while ($oosStart -le $lastStart) {
     $valStart = $oosStart.AddMonths(-1 * $ValidationMonths)
     $isEnd = $valStart
-    $isStart = $isEnd.AddYears(-1 * $ISYears)
+    $isStart = $isEnd.AddMonths(-1 * $ISMonths)
     $oosEnd = $oosStart.AddMonths($OosMonths)
     $windowId = ('W{0:D4}_{1}' -f $index, (Get-DateLabel $oosStart))
 
@@ -402,13 +402,7 @@ function New-OosManifest {
 
   $oosStart = [datetime]::ParseExact($Window.OosStart, 'yyyy.MM.dd', [System.Globalization.CultureInfo]::InvariantCulture)
   $periods = @(
-    [pscustomobject]@{ Segment = 'OOS_0_90'; From = $oosStart; To = $oosStart.AddMonths(3); HorizonType = 'PrimaryAndSlice'; MonthsFrom = 0; MonthsTo = 3 },
-    [pscustomobject]@{ Segment = 'OOS_91_180'; From = $oosStart.AddMonths(3); To = $oosStart.AddMonths(6); HorizonType = 'Slice'; MonthsFrom = 3; MonthsTo = 6 },
-    [pscustomobject]@{ Segment = 'OOS_181_270'; From = $oosStart.AddMonths(6); To = $oosStart.AddMonths(9); HorizonType = 'Slice'; MonthsFrom = 6; MonthsTo = 9 },
-    [pscustomobject]@{ Segment = 'OOS_271_360'; From = $oosStart.AddMonths(9); To = $oosStart.AddMonths(12); HorizonType = 'Slice'; MonthsFrom = 9; MonthsTo = 12 },
-    [pscustomobject]@{ Segment = 'OOS_0_180'; From = $oosStart; To = $oosStart.AddMonths(6); HorizonType = 'Cumulative'; MonthsFrom = 0; MonthsTo = 6 },
-    [pscustomobject]@{ Segment = 'OOS_0_270'; From = $oosStart; To = $oosStart.AddMonths(9); HorizonType = 'Cumulative'; MonthsFrom = 0; MonthsTo = 9 },
-    [pscustomobject]@{ Segment = 'OOS_0_360'; From = $oosStart; To = $oosStart.AddMonths(12); HorizonType = 'Cumulative'; MonthsFrom = 0; MonthsTo = 12 }
+    [pscustomobject]@{ Segment = 'OOS_0_90'; From = $oosStart; To = $oosStart.AddMonths($OosMonths); HorizonType = 'PrimaryAndSlice'; MonthsFrom = 0; MonthsTo = $OosMonths }
   )
 
   $rows = [System.Collections.Generic.List[object]]::new()
@@ -699,7 +693,7 @@ foreach ($subdir in @('optimizer', 'validation', 'oos')) {
 
 if (-not (Test-Path -LiteralPath $templateSetPath)) { throw "Template set file not found: $templateSetPath" }
 if (-not (Test-Path -LiteralPath $TerminalPath) -and -not $PrepareOnly) { throw "MT5 terminal not found: $TerminalPath" }
-if ($ISYears -le 0 -or $ValidationMonths -le 0 -or $OosMonths -le 0 -or $PrimaryOosMonths -le 0 -or $StepMonths -le 0) { throw 'Window lengths must be positive.' }
+if ($ISMonths -le 0 -or $ValidationMonths -le 0 -or $OosMonths -le 0 -or $PrimaryOosMonths -le 0 -or $StepMonths -le 0) { throw 'Window lengths must be positive.' }
 if ($PrimaryOosMonths -gt $OosMonths) { throw 'PrimaryOosMonths cannot be greater than OosMonths.' }
 if ($TopOptimizerCandidates -le 0) { throw 'TopOptimizerCandidates must be positive.' }
 
@@ -709,7 +703,7 @@ $windows | Export-Csv -LiteralPath $windowsPath -NoTypeInformation -Encoding ASC
 Write-Host "Experiment: $ExperimentId"
 Write-Host "Directory: $experimentDir"
 Write-Host "Symbol: $Symbol $Period"
-Write-Host "Hyperparameters: IS=$ISYears years, VAL=$ValidationMonths months, OOS=$OosMonths months, primary OOS=$PrimaryOosMonths months, step=$StepMonths month(s)"
+Write-Host "Hyperparameters: IS=$ISMonths months, VAL=$ValidationMonths months, OOS=$OosMonths months, primary OOS=$PrimaryOosMonths months, step=$StepMonths month(s)"
 Write-Host "Windows: $($windows.Count) ($($windows[0].OosStart) -> $($windows[-1].OosStart))"
 Write-Host "Validation rule: rank every completed VAL report and select exactly one candidate per window. No VAL pass/fail filter is applied."
 

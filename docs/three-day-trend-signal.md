@@ -38,11 +38,14 @@ Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5
 
 Implemented so far:
 
-- ATR momentum candle feature only.
-- Blue circle marker for bullish momentum.
-- Red circle marker for bearish momentum.
-- Optional market order execution for newly drawn momentum circles.
-- No relative volume logic.
+- ATR momentum candle feature.
+- Relative volume feature using tick volume.
+- Blue circle marker for bullish momentum without relative volume.
+- Red circle marker for bearish momentum without relative volume.
+- Orange diamond marker for relative volume without ATR momentum.
+- Aqua square marker for bullish ATR momentum plus relative volume.
+- Purple square marker for bearish ATR momentum plus relative volume.
+- Optional market order execution for newly drawn momentum markers.
 - No three-day trend filter.
 - No final long/short triangle signals.
 
@@ -66,9 +69,12 @@ The EA processes closed candles. On initialization it draws recent historical mo
 
 Trade execution for genetic testing:
 
-- `g_EnableTrading` controls whether newly drawn momentum circles place market orders.
+- `g_EnableTrading` controls whether newly drawn momentum markers place market orders.
 - Blue momentum circles place buy market orders.
 - Red momentum circles place sell market orders.
+- Aqua bullish momentum plus relative-volume squares place buy market orders.
+- Purple bearish momentum plus relative-volume squares place sell market orders.
+- Orange relative-volume-only diamonds do not place trades.
 - Position size is calculated from `g_StartingBalance * g_RiskPercentOfBalance / 100.0` and the actual stop-loss distance.
 - Default risk model is `1.0%` of a fixed `100000.0` starting balance, so the risk amount is `1000.0` account currency per trade unless inputs are changed.
 - `g_StopLossATRMultiple` sets stop-loss distance as a multiple of ATR.
@@ -79,14 +85,14 @@ Trade execution for genetic testing:
 
 Implemented now:
 
-- Bullish ATR momentum: blue circle above the bar.
-- Bearish ATR momentum: red circle below the bar.
+- Bullish ATR momentum without relative volume: blue circle above the bar.
+- Bearish ATR momentum without relative volume: red circle below the bar.
+- Relative volume threshold without ATR momentum: orange diamond above the bar.
+- Bullish ATR momentum plus relative volume: aqua square above the bar.
+- Bearish ATR momentum plus relative volume: purple square below the bar.
 
 Planned later:
 
-- Relative volume threshold without ATR momentum: orange diamond.
-- Bullish ATR momentum plus relative volume: aqua square.
-- Bearish ATR momentum plus relative volume: purple square.
 - Final long signal: large blue triangle up.
 - Final short signal: large red triangle down.
 
@@ -95,7 +101,7 @@ Planned later:
 Use this order unless the user changes direction:
 
 1. Momentum candle markers.
-2. Relative volume markers.
+2. Relative volume markers. Done using tick volume.
 3. Daily trend filter.
 4. Final long/short signal markers.
 5. Backtest analysis and trade logging support if needed.
@@ -109,7 +115,7 @@ The first EA version compiled through MetaEditor with:
 0 errors, 0 warnings
 ```
 
-Latest compile status after fixed-balance risk sizing was added: `0 errors, 0 warnings`.
+Latest compile status after relative volume markers were added: `0 errors, 0 warnings`.
 
 Future changes should continue compiling cleanly before being considered complete.
 
@@ -118,7 +124,7 @@ Future changes should continue compiling cleanly before being considered complet
 - `Files/ThreeDayTrendSignal/TDTS_EURUSD_Genetic_20260718.ini`: prepared EURUSD H1 genetic optimization config for `2000.01.01 -> 2018.01.01` with forward mode enabled. Do not run automatically from assistant sessions unless explicitly requested.
 - `Profiles/Tester/ThreeDayTrendSignal_EURUSD_Genetic_20260718.set`: matching optimizer input preset for ATR period, ATR momentum multiplier, contiguous candle count, stop-loss ATR multiple, and take-profit SL multiple. Current lot sizing uses fixed starting-balance risk with `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0`.
 - `Files/ThreeDayTrendSignal/Run-TDTS-WalkForwardRestartable.ps1`: restartable TDTS rolling-cycle runner from the older EURUSD-discovery plus cross-symbol-promotion workflow. Treat it as legacy scaffolding unless it is revised for the new per-symbol ephemeral-generator process.
-- `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1`: active restartable EURUSD baseline generator runner. Defaults are `5y` IS, `6m` validation, `12m` OOS, `3m` primary OOS horizon, and `1m` rolling step. Validation ranking always promotes exactly one OOS candidate when validation reports exist.
+- `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1`: active restartable EURUSD baseline generator runner. Defaults are `36m` IS, `3m` validation, `3m` OOS, `3m` primary OOS horizon, and `1m` rolling step. Validation ranking always promotes exactly one OOS candidate when validation reports exist.
 - `Files/ThreeDayTrendSignal/tdts_ephemeral_optimizer_current.ini`: current generated optimizer config for the active EURUSD generator runner.
 
 Testing caveat: the first completed `2026-07-18` EURUSD H1 genetic run used the earlier fixed `0.10` lot model. Rerun the genetic test after the fixed-balance risk-sizing change before promoting candidates from that result.

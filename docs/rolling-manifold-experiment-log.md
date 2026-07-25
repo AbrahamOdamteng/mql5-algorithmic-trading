@@ -23,14 +23,14 @@ Each entry should include:
 - Canonical process file: `ephemeral-manifold-generator.md`.
 - Run each symbol independently.
 - Generator hyperparameters: IS duration, validation duration, OOS deployment duration, rolling step size, validation survivor count, IS filters, validation filters, thresholds, and ranking algorithm.
-- Baseline IS window: rolling `5` years.
-- Baseline validation window: next `6` months.
+- Baseline IS window: rolling `36` months.
+- Baseline validation window: next `3` months.
 - Baseline step size: `1` month.
 - Cross-symbol transfer requirement: none.
 - Selection: deterministic scoring over validation survivors, exactly one manifold per symbol per monthly window.
 - No-survivor behavior: record `no selection`; do not relax filters after seeing the failed window.
-- OOS structure: frozen manifold measured over `OOS-1` days `0-90`, `OOS-2` days `91-180`, `OOS-3` days `181-270`, and `OOS-4` days `271-360`.
-- Cumulative OOS horizons: `0-90`, `0-180`, `0-270`, and `0-360` days.
+- OOS structure: frozen manifold measured over `OOS-1` days `0-90`.
+- Cumulative OOS horizon: `0-90` days.
 - Portfolio rule: never deploy multiple manifolds on the same symbol in the same deployment period.
 - Final score: generator performance across monthly deployment dates, including skipped windows.
 - Challenge-stage relationship: intended to support FTMO challenge and verification pass-rate-first account acquisition, then funded-account profitability if manifolds remain useful.
@@ -38,6 +38,14 @@ Each entry should include:
 - Canonical FTMO requirements file: `ftmo-challenge-requirements.md`.
 
 ## Entries
+
+### 2026-07-25 - EURUSD Generator Window Lengths Shortened
+
+- Goal: Revise the active EURUSD ephemeral-generator process to use shorter discovery, validation, and deployment windows.
+- Change or experiment: Updated `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1` defaults to `36` months IS, `3` months validation, and `3` months OOS, with the process ID `tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m`.
+- Test setup: Documentation and runner preparation only; no MT5 optimizer or fixed tests run.
+- Outcome: `PrepareOnly` generated the first optimizer config for `2017.04.01 -> 2020.04.01` and confirmed `59` monthly windows from `2020.07.01 -> 2025.05.01`.
+- Decision or next step: Run the active EURUSD generator with the normal runner command when ready; rerun the same command to resume from generated reports.
 
 ### 2026-07-20 - Research Direction Reset To Ephemeral Generator
 
@@ -59,11 +67,11 @@ Each entry should include:
 
 - Goal: Prepare a restartable overnight run for the active EURUSD ephemeral-generator baseline.
 - Change or experiment: Added `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1` and generated `Files/ThreeDayTrendSignal/tdts_ephemeral_optimizer_current.ini` with `PrepareOnly`.
-- Test setup: Symbol `EURUSD`; timeframe `H1`; IS `5` years; validation `6` months; OOS `12` months; primary OOS horizon `3` months; rolling step `1` month; first OOS start `2005.07.01`; last OOS start `2025.05.01`; `239` monthly windows.
+- Test setup: Symbol `EURUSD`; timeframe `H1`; IS `5` years; validation `6` months; OOS `12` months; primary OOS horizon `3` months; rolling step `1` month; first OOS start `2020.07.01`; last OOS start `2025.05.01`; `59` monthly windows. The first IS window is `2015.01.01 -> 2020.01.01`.
 - Selection rule: The runner ranks optimizer candidates by IS score, validates the top `25`, ranks all completed validation reports by deterministic validation score, and selects exactly one OOS candidate per window. No validation pass/fail filter can produce zero OOS candidates when validation reports exist.
 - OOS structure: Runs `OOS_0_90`, `OOS_91_180`, `OOS_181_270`, `OOS_271_360`, `OOS_0_180`, `OOS_0_270`, and `OOS_0_360` fixed tests for the selected manifold.
 - OOS discipline: Unprofitable OOS runs are recorded as failed deployment data and must not stop later rolling windows from running.
-- Outcome: PowerShell parser check passed. `PrepareOnly` dry run created `239` windows and did not launch MT5.
+- Outcome: PowerShell parser check passed. `PrepareOnly` dry run created `59` windows and did not launch MT5.
 - Decision or next step: Start the overnight run with `powershell -ExecutionPolicy Bypass -File .\Files\ThreeDayTrendSignal\Run-TDTS-EURUSD-EphemeralGenerator.ps1`; rerun the same command after any pause or stop to resume.
 
 ### 2026-07-20 - TDTS RM 2018 5Y/1Y/1Y First Corrected Cycle

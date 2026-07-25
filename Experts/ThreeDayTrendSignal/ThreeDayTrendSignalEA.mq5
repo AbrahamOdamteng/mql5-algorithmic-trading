@@ -12,6 +12,9 @@
 input int    g_ATR_Period          = 14;
 input double g_ATR_Multiplier      = 5.0;
 input int    g_ContiguousCandles   = 2;
+input int    g_RelVolLength        = 20;
+input int    g_RelVolCandles       = 1;
+input double g_RelVolThreshold     = 1.5;
 input int    g_HistoryBarsToScan   = 2000;
 input int    g_MarkerSize          = 1;
 input bool   g_DeleteObjectsOnInit = true;
@@ -48,6 +51,24 @@ int OnInit()
    if(g_ContiguousCandles < 1)
    {
       Print("g_ContiguousCandles must be at least 1");
+      return INIT_PARAMETERS_INCORRECT;
+   }
+
+   if(g_RelVolLength < 1)
+   {
+      Print("g_RelVolLength must be at least 1");
+      return INIT_PARAMETERS_INCORRECT;
+   }
+
+   if(g_RelVolCandles < 1)
+   {
+      Print("g_RelVolCandles must be at least 1");
+      return INIT_PARAMETERS_INCORRECT;
+   }
+
+   if(g_RelVolThreshold < 0.0)
+   {
+      Print("g_RelVolThreshold must be at least 0");
       return INIT_PARAMETERS_INCORRECT;
    }
 
@@ -122,10 +143,11 @@ void OnTick()
 //+------------------------------------------------------------------+
 void ProcessLatestClosedBar()
 {
+   bool hasMomentum = false;
    bool bullishMomentum = false;
    double atrValue = 0.0;
 
-   if(DrawMomentumMarkerForShift(1, bullishMomentum, atrValue) && g_EnableTrading)
+   if(DrawSignalMarkerForShift(1, hasMomentum, bullishMomentum, atrValue) && hasMomentum && g_EnableTrading)
       ExecuteMarketOrder(bullishMomentum, atrValue);
 }
 
@@ -136,63 +158,91 @@ void DrawHistoricalMomentumMarkers()
    if(availableBars <= g_ContiguousCandles)
       return;
 
-   int barsToCopy = MathMin(availableBars, MathMax(g_HistoryBarsToScan, g_ATR_Period + g_ContiguousCandles + 10));
+   int barsPerDay = GetBarsPerDay();
+   int minimumHistoryBars = g_ATR_Period + g_ContiguousCandles + g_RelVolCandles + (g_RelVolLength * barsPerDay) + 10;
+   int barsToCopy = MathMin(availableBars, MathMax(g_HistoryBarsToScan, minimumHistoryBars));
 
    MqlRates rates[];
    double atrValues[];
 
    int copiedRates = CopyRates(_Symbol, _Period, 0, barsToCopy, rates);
-   int copiedAtr = CopyBuffer(g_ATR_Handle, 0, 0, barsToCopy, atrValues);
+   CopyBuffer(g_ATR_Handle, 0, 0, barsToCopy, atrValues);
 
-   if(copiedRates <= g_ContiguousCandles || copiedAtr <= g_ContiguousCandles)
+   if(copiedRates <= g_ContiguousCandles)
    {
-      Print("Not enough history to draw momentum markers");
+      Print("Not enough history to draw TDTS markers");
       return;
    }
 
    ArraySetAsSeries(rates, true);
    ArraySetAsSeries(atrValues, true);
 
-   int usableBars = MathMin(copiedRates, copiedAtr);
-   int oldestUsableShift = usableBars - g_ContiguousCandles;
+   int oldestUsableShift = copiedRates - 1;
 
    for(int shift = oldestUsableShift; shift >= 1; shift--)
    {
+      bool hasMomentum = false;
       bool bullishMomentum = false;
       double atrValue = 0.0;
-      DrawMomentumMarker(rates, atrValues, shift, bullishMomentum, atrValue);
+      DrawSignalMarker(rates, atrValues, shift, hasMomentum, bullishMomentum, atrValue);
    }
 
    ChartRedraw(0);
 }
 
 //+------------------------------------------------------------------+
-bool DrawMomentumMarkerForShift(const int shift, bool &bullishMomentum, double &atrValue)
+bool DrawSignalMarkerForShift(const int shift, bool &hasMomentum, bool &bullishMomentum, double &atrValue)
 {
    MqlRates rates[];
    double atrValues[];
-   int barsNeeded = shift + g_ContiguousCandles;
+   int barsPerDay = GetBarsPerDay();
+   int momentumBarsNeeded = shift + g_ContiguousCandles;
+   int relVolBarsNeeded = shift + g_RelVolCandles + (g_RelVolLength * barsPerDay);
+   int barsNeeded = MathMax(momentumBarsNeeded, relVolBarsNeeded);
 
    int copiedRates = CopyRates(_Symbol, _Period, 0, barsNeeded, rates);
-   int copiedAtr = CopyBuffer(g_ATR_Handle, 0, 0, shift + 1, atrValues);
+   CopyBuffer(g_ATR_Handle, 0, 0, shift + 1, atrValues);
 
-   if(copiedRates < barsNeeded || copiedAtr <= shift)
+   if(copiedRates < barsNeeded)
       return false;
 
    ArraySetAsSeries(rates, true);
    ArraySetAsSeries(atrValues, true);
 
-   bool markerDrawn = DrawMomentumMarker(rates, atrValues, shift, bullishMomentum, atrValue);
+   bool markerDrawn = DrawSignalMarker(rates, atrValues, shift, hasMomentum, bullishMomentum, atrValue);
    ChartRedraw(0);
    return markerDrawn;
 }
 
 //+------------------------------------------------------------------+
-bool DrawMomentumMarker(MqlRates &rates[], double &atrValues[], const int shift, bool &bullishMomentum, double &signalAtrValue)
+bool DrawSignalMarker(MqlRates &rates[], double &atrValues[], const int shift, bool &hasMomentum, bool &bullishMomentum, double &signalAtrValue)
+{
+   hasMomentum = false;
+   bullishMomentum = false;
+   signalAtrValue = 0.0;
+
+   bool relVolSignal = IsRelativeVolumeSignal(rates, shift);
+   hasMomentum = GetMomentumSignal(rates, atrValues, shift, bullishMomentum, signalAtrValue);
+
+   if(!hasMomentum && !relVolSignal)
+      return false;
+
+   if(hasMomentum && relVolSignal)
+      return DrawMarker(rates[shift], signalAtrValue, bullishMomentum ? "BullSquare_" : "BearSquare_", bullishMomentum, 110, bullishMomentum ? clrAqua : clrPurple);
+
+   if(hasMomentum)
+      return DrawMarker(rates[shift], signalAtrValue, bullishMomentum ? "BullCircle_" : "BearCircle_", bullishMomentum, 159, bullishMomentum ? clrBlue : clrRed);
+
+   double relVolAtrValue = GetAtrValue(atrValues, shift);
+   return DrawMarker(rates[shift], relVolAtrValue, "RelVol_", true, 117, clrOrange);
+}
+
+//+------------------------------------------------------------------+
+bool GetMomentumSignal(MqlRates &rates[], double &atrValues[], const int shift, bool &bullishMomentum, double &signalAtrValue)
 {
    int oldestRequestedShift = shift + g_ContiguousCandles - 1;
    int blockOpenShift = shift;
-   double atrValue = atrValues[shift];
+   double atrValue = GetAtrValue(atrValues, shift);
 
    if(atrValue <= 0.0 || oldestRequestedShift >= ArraySize(rates))
       return false;
@@ -222,32 +272,95 @@ bool DrawMomentumMarker(MqlRates &rates[], double &atrValues[], const int shift,
 
    bullishMomentum = (blockClose >= blockOpen);
    signalAtrValue = atrValue;
-   return DrawMomentumCircle(rates[shift], atrValue, bullishMomentum);
+   return true;
 }
 
 //+------------------------------------------------------------------+
-bool DrawMomentumCircle(const MqlRates &bar, const double atrValue, const bool bullishMomentum)
+bool IsRelativeVolumeSignal(MqlRates &rates[], const int shift)
 {
-   string direction = bullishMomentum ? "Bull_" : "Bear_";
-   string name = g_ObjectPrefix + direction + _Symbol + "_" + IntegerToString((int)_Period) + "_" + IntegerToString((int)bar.time);
+   double relVolCombined = 0.0;
+
+   for(int candleOffset = 0; candleOffset < g_RelVolCandles; candleOffset++)
+   {
+      double relVol = 0.0;
+      if(!GetRelativeVolumeForShift(rates, shift + candleOffset, relVol))
+         return false;
+
+      relVolCombined += relVol;
+   }
+
+   return relVolCombined >= g_RelVolThreshold;
+}
+
+//+------------------------------------------------------------------+
+bool GetRelativeVolumeForShift(MqlRates &rates[], const int shift, double &relVol)
+{
+   int barsPerDay = GetBarsPerDay();
+   double relVolSum = 0.0;
+   int relVolCount = 0;
+
+   for(int i = 1; i <= g_RelVolLength; i++)
+   {
+      int volumeShift = shift + (i * barsPerDay);
+      if(volumeShift >= ArraySize(rates))
+         continue;
+
+      relVolSum += (double)rates[volumeShift].tick_volume;
+      relVolCount++;
+   }
+
+   if(relVolCount <= 0)
+      return false;
+
+   double relVolAvg = relVolSum / (double)relVolCount;
+   if(relVolAvg <= 0.0)
+      return false;
+
+   relVol = (double)rates[shift].tick_volume / relVolAvg;
+   return true;
+}
+
+//+------------------------------------------------------------------+
+double GetAtrValue(double &atrValues[], const int shift)
+{
+   if(shift < 0 || shift >= ArraySize(atrValues))
+      return 0.0;
+
+   return atrValues[shift];
+}
+
+//+------------------------------------------------------------------+
+int GetBarsPerDay()
+{
+   int periodSeconds = PeriodSeconds(_Period);
+   if(periodSeconds <= 0)
+      return 1;
+
+   return MathMax(1, (int)(86400 / periodSeconds));
+}
+
+//+------------------------------------------------------------------+
+bool DrawMarker(const MqlRates &bar, const double atrValue, const string markerType, const bool aboveBar, const int arrowCode, const color markerColor)
+{
+   string name = g_ObjectPrefix + markerType + _Symbol + "_" + IntegerToString((int)_Period) + "_" + IntegerToString((int)bar.time);
 
    if(ObjectFind(0, name) >= 0)
       return false;
 
    double fallbackOffset = SymbolInfoDouble(_Symbol, SYMBOL_POINT) * 10.0;
    double markerOffset = MathMax(atrValue * 0.15, fallbackOffset);
-   double markerPrice = bullishMomentum ? bar.high + markerOffset : bar.low - markerOffset;
+   double markerPrice = aboveBar ? bar.high + markerOffset : bar.low - markerOffset;
 
    if(!ObjectCreate(0, name, OBJ_ARROW, 0, bar.time, markerPrice))
    {
-      Print("Failed to create momentum marker ", name, ". Error: ", GetLastError());
+      Print("Failed to create TDTS marker ", name, ". Error: ", GetLastError());
       return false;
    }
 
-   ObjectSetInteger(0, name, OBJPROP_ARROWCODE, 159);
-   ObjectSetInteger(0, name, OBJPROP_COLOR, bullishMomentum ? clrBlue : clrRed);
+   ObjectSetInteger(0, name, OBJPROP_ARROWCODE, arrowCode);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, markerColor);
    ObjectSetInteger(0, name, OBJPROP_WIDTH, g_MarkerSize);
-   ObjectSetInteger(0, name, OBJPROP_ANCHOR, bullishMomentum ? ANCHOR_BOTTOM : ANCHOR_TOP);
+   ObjectSetInteger(0, name, OBJPROP_ANCHOR, aboveBar ? ANCHOR_BOTTOM : ANCHOR_TOP);
    ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
    ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
    return true;
