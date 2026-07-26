@@ -12,7 +12,7 @@ The active strategy implementation is the Three Day Trend Signal strategy, origi
 C:\Users\abraham\AppData\Roaming\MetaQuotes\Terminal\Common\Files\3 Day Trend Signal with ATR Candle Filter.txt
 ```
 
-The MQL5 implementation should be built incrementally in `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`. Momentum-circle market order execution has been added for genetic testing.
+The MQL5 implementation should be built incrementally in `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`. Market-order execution from ATR momentum plus relative-volume square markers has been added for genetic testing.
 
 Current implementation state:
 
@@ -20,16 +20,18 @@ Current implementation state:
 - Relative volume markers are implemented using tick volume.
 - The three-day trend filter is not implemented yet.
 - Final long/short signal triangles are not implemented yet.
-- Optional market order placement is implemented for newly drawn ATR momentum markers for genetic testing.
+- Optional market order placement is implemented only for newly drawn ATR momentum plus relative-volume square markers for genetic testing.
 - Trade sizing uses fixed starting-balance risk, defaulting to `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0`, rather than fixed lots.
 
 See `three-day-trend-signal.md` for the active strategy details.
 
-The active research direction is now the Ephemeral Manifold Generator. The goal is no longer to find a forever manifold. The goal is to build and empirically optimize a repeatable per-symbol pipeline that discovers short-lived manifolds. Baseline hyperparameters are rolling `36`-month IS, `3`-month validation, deterministic selection of exactly one frozen manifold, and OOS measurement over a `3`-month horizon. These are generator hyperparameters to test, not settled optimal values. See `ephemeral-manifold-generator.md`.
+The active research direction is now the Ephemeral Manifold Generator. The goal is no longer to find a forever manifold. The goal is to build and empirically optimize a repeatable per-symbol pipeline that discovers short-lived manifolds. Baseline hyperparameters are rolling `36`-month IS, `3`-month validation, deterministic selection of exactly one frozen manifold, and a single `3`-month OOS measurement. Alpha-decay slices are disabled for the current run. These are generator hyperparameters to test, not settled optimal values. See `ephemeral-manifold-generator.md`.
+
+Latest EURUSD generator finding: for the first six windows of `tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m`, `PositiveLowestTrades` is the current best validation selection mode with net OOS `+9,214.41`, `3 / 6` profitable windows, worst DD `22.65%`, and `465` OOS trades. This is a lead diagnostic result, not a promoted process, because the last three overlapping OOS windows remain negative.
 
 ## Primary Files
 
-- `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`: Active EA for the new strategy. It currently draws ATR momentum and relative-volume markers, and can place risk-sized market orders from newly drawn momentum markers.
+- `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`: Active EA for the new strategy. It currently draws ATR momentum and relative-volume markers, and can place risk-sized market orders from newly drawn ATR momentum plus relative-volume square markers.
 - `docs/three-day-trend-signal.md`: Active strategy notes and implementation sequence.
 
 Legacy WeekHighLow files, retained for reference unless explicitly revisited:
@@ -118,6 +120,7 @@ Current per-symbol generator workflow:
 - Select exactly one frozen manifold per symbol per monthly window.
 - Evaluate OOS decay over the process version's deployment/decay horizons without modifying the manifold.
 - Score the generator process across monthly deployment dates, including `no selection` windows.
+- Keep generated optimizer and validation reports so alternate validation-to-OOS selection modes can be tested later without rerunning completed IS/VAL work.
 
 Low trade count remains a risk, but the trade-count rule must be part of the fixed IS filters, fixed validation filters, or deterministic scoring algorithm before OOS is measured.
 
@@ -136,7 +139,7 @@ Validation safeguards for the generator:
 
 ## Legacy Fixed-Manifold Test Plan
 
-The fixed `2000 -> 2012`, `2012 -> 2018`, and `2018 -> 2026` split below belongs to the older fixed-manifold workflow. The active generator workflow uses rolling monthly `36`-month IS, `3`-month validation, and `3`-month OOS horizons.
+The fixed `2000 -> 2012`, `2012 -> 2018`, and `2018 -> 2026` split below belongs to the older fixed-manifold workflow. The active generator workflow uses rolling monthly `36`-month IS, `3`-month validation, and a single `3`-month OOS horizon.
 
 - `2000 -> 2012`: In-sample period, tested by the MT5 optimizer.
 - `2012 -> 2018`: Validation period, tested by MT5 optimizer forward testing.

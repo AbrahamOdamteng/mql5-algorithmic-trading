@@ -9,7 +9,7 @@ These are the decisions that should be clarified before larger refactors or stra
 3. Confirm how strictly relative volume should match the PineScript's same-intraday-bar lookback calculation across broker sessions and DST changes.
 4. Confirm whether final long/short signals should fire only on the first bar of a new broker day, matching `ta.change(time("D"))`, or on another session boundary.
 5. Confirm whether the EA should continue using closed candles only, even if the PineScript indicator plots on the currently forming bar in TradingView.
-6. Momentum-circle order placement has been explicitly enabled for genetic testing. Confirm whether final long/short signal order placement should remain disabled until all chart markers visually match the PineScript.
+6. Square-marker order placement, requiring ATR momentum plus relative volume, has been explicitly enabled for genetic testing. Confirm whether final long/short signal order placement should remain disabled until all chart markers visually match the PineScript.
 
 ## Legacy WeekHighLow Strategy Definition
 
@@ -92,7 +92,7 @@ These are the decisions that should be clarified before larger refactors or stra
 
 ## Rolling Manifold Research
 
-1. The active research direction is now the Ephemeral Manifold Generator. The baseline process is per-symbol rolling `36`-month IS, `3`-month validation, monthly step, deterministic selection of exactly one frozen manifold, and OOS measurement through `90` days; these are generator hyperparameters to test empirically, not settled optimal values.
+1. The active research direction is now the Ephemeral Manifold Generator. The baseline process is per-symbol rolling `36`-month IS, `3`-month validation, monthly step, deterministic selection of exactly one frozen manifold, and one OOS measurement through `90` days; these are generator hyperparameters to test empirically, not settled optimal values.
 2. Which IS durations should be compared first: `2y`, `3y`, `4y`, `5y`, `6y`, or another grid?
 3. Which validation durations should be compared first: `3m`, `6m`, `9m`, `12m`, or another grid?
 4. What OOS deployment and decay horizons should be compared when measuring manifold lifespan?

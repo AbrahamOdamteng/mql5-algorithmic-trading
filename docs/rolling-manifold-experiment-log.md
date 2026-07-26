@@ -28,8 +28,9 @@ Each entry should include:
 - Baseline step size: `1` month.
 - Cross-symbol transfer requirement: none.
 - Selection: deterministic scoring over validation survivors, exactly one manifold per symbol per monthly window.
+- Current best tested reselection mode for the first `6` EURUSD windows is `PositiveLowestTrades`: profitable validation candidates only, lowest validation trade count first, deterministic tie-breakers.
 - No-survivor behavior: record `no selection`; do not relax filters after seeing the failed window.
-- OOS structure: frozen manifold measured over `OOS-1` days `0-90`.
+- OOS structure: frozen manifold measured once over days `0-90`.
 - Cumulative OOS horizon: `0-90` days.
 - Portfolio rule: never deploy multiple manifolds on the same symbol in the same deployment period.
 - Final score: generator performance across monthly deployment dates, including skipped windows.
@@ -39,10 +40,35 @@ Each entry should include:
 
 ## Entries
 
+### 2026-07-26 - TDTS RelVol Square-Only EA And Six-Window Reselection Results
+
+- Goal: Bring the MQL5 EA closer to the PineScript by adding relative-volume confirmation and test whether alternate validation-to-OOS selection rules improve the first six EURUSD ephemeral-generator windows.
+- Change or experiment: Added relative-volume inputs to `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`: `g_RelVolLength`, `g_RelVolCandles`, and `g_RelVolThreshold`. Relative volume uses tick volume and same-intraday-slot lookback, matching PineScript structure as closely as practical in MT5.
+- Change or experiment: Updated marker behavior: blue circle means bullish ATR momentum only, red circle means bearish ATR momentum only, orange diamond means RelVol only, aqua square means bullish ATR momentum plus RelVol, and purple square means bearish ATR momentum plus RelVol.
+- Change or experiment: Changed trade execution so the EA places market orders only from square markers, meaning ATR momentum and RelVol must occur together. Blue/red momentum-only circles and orange RelVol-only diamonds are visual only. Historical markers drawn during `OnInit()` still do not trade.
+- Change or experiment: Updated `Profiles/Tester/ThreeDayTrendSignal_EURUSD_Genetic_20260718.set` so RelVol parameters are optimizer-enabled: `g_RelVolLength=20||5||5||50||Y`, `g_RelVolCandles=1||1||1||5||Y`, and `g_RelVolThreshold=1.5||0.5||0.1||3.0||Y`.
+- Change or experiment: Updated `Run-TDTS-EURUSD-EphemeralGenerator.ps1` so optimized RelVol parameters are copied into validation and OOS fixed-test `.set` files, and so older manifests missing RelVol columns are tolerated with defaults `20`, `1`, and `1.5`.
+- Change or experiment: Added validation reselection modes: `Score`, `Profit`, `Trades`, `LowestTrades`, `PositiveLowestTrades`, `PositiveLowestTradesThenDD`, `PositiveBestRatio`, `LowestDD`, and `HighestDD`. Reruns keep generated optimizer/validation reports and write mode-specific CSV artifacts.
+- Test setup: Symbol `EURUSD`; timeframe `H1`; process ID `tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m`; `36` months IS, `3` months validation, `3` months OOS, `1` month step; first six OOS starts `2020.07.01` through `2020.12.01`; top `25` IS candidates validated per window; one selected OOS manifold per window.
+- Verification: MetaEditor compiled `ThreeDayTrendSignalEA.mq5` with `0 errors, 0 warnings` after RelVol and square-only trade changes. PowerShell `PrepareOnly` checks passed for new runner modes.
+- Outcome: The first six-window baseline was negative for the original `Score` mode and most simple modes. The consistently weak region was OOS windows starting `2020.10.01`, `2020.11.01`, and `2020.12.01`.
+- Selection-mode comparison: `Score` had `2 / 6` profitable windows, net OOS `-50,043.11`, worst DD `35.55%`, `614` trades. `Trades` had `3 / 6`, net `-21,527.08`, worst DD `50.19%`, `1,052` trades. `Profit` had `3 / 6`, net `-37,516.09`, worst DD `50.19%`, `761` trades. `LowestDD` had `1 / 6`, net `-62,487.57`, worst DD `35.22%`, `653` trades. `HighestDD` had `2 / 6`, net `-19,481.66`, worst DD `50.19%`, `822` trades. `LowestTrades` had `2 / 6`, net `-8,257.98`, worst DD `22.65%`, `397` trades. `PositiveLowestTrades` had `3 / 6`, net `9,214.41`, worst DD `22.65%`, `465` trades. `PositiveLowestTradesThenDD` had `3 / 6`, net `7,636.04`, worst DD `22.65%`, `467` trades. `PositiveBestRatio` had `1 / 6`, net `-63,224.19`, worst DD `35.55%`, `663` trades.
+- Current best mode: `PositiveLowestTrades`. Window OOS results were W0001 `+19,244.30`, W0002 `+12,425.36`, W0003 `+13,866.84`, W0004 `-12,055.36`, W0005 `-14,141.12`, and W0006 `-10,125.61`, for net `+9,214.41`.
+- Interpretation: Requiring positive validation profit and selecting the lowest-trade candidate materially improved robustness and contained drawdown relative to other tested modes. However, even the best mode still failed the final three overlapping OOS windows, so the process is not yet robust enough to promote. The repeated late-window failure suggests a regime issue or that the `3`-month validation selection does not predict the next `3` months reliably in that period.
+- Decision or next step: Treat `PositiveLowestTrades` as the current lead validation-to-OOS selection rule for this process version. Next useful tests are candidate filters or modes derived from the same idea, such as profitable validation plus a trade band, drawdown cap, or conservative score. Do not discard existing reports; they are needed for additional reselection tests without rerunning IS/VAL.
+
+### 2026-07-25 - Validation Reselection Modes Added
+
+- Goal: Preserve generated optimizer and validation reports so alternate VAL-to-OOS selection criteria can be tested later without rerunning completed IS/VAL work.
+- Change or experiment: Added `-ValidationSelectionMode` to `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1`, supporting `Score`, `Profit`, `Trades`, `LowestTrades`, `PositiveLowestTrades`, `PositiveLowestTradesThenDD`, `PositiveBestRatio`, `LowestDD`, and `HighestDD`.
+- Test setup: Ran `PrepareOnly` with `-ValidationSelectionMode Trades`; no MT5 optimizer or fixed tests run.
+- Outcome: The runner parsed successfully and generated the current optimizer config while reporting the selected validation mode. Mode-specific CSV artifacts are written for selection and OOS results so alternate reruns can be compared.
+- Decision or next step: After a baseline run completes, rerun with a different `-ValidationSelectionMode` to reuse existing optimizer and validation reports and test a different selected OOS manifold.
+
 ### 2026-07-25 - EURUSD Generator Window Lengths Shortened
 
 - Goal: Revise the active EURUSD ephemeral-generator process to use shorter discovery, validation, and deployment windows.
-- Change or experiment: Updated `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1` defaults to `36` months IS, `3` months validation, and `3` months OOS, with the process ID `tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m`.
+- Change or experiment: Updated `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1` defaults to `36` months IS, `3` months validation, and a single `3` months OOS report, with the process ID `tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m`.
 - Test setup: Documentation and runner preparation only; no MT5 optimizer or fixed tests run.
 - Outcome: `PrepareOnly` generated the first optimizer config for `2017.04.01 -> 2020.04.01` and confirmed `59` monthly windows from `2020.07.01 -> 2025.05.01`.
 - Decision or next step: Run the active EURUSD generator with the normal runner command when ready; rerun the same command to resume from generated reports.

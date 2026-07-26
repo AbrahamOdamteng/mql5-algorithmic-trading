@@ -15,7 +15,7 @@ Current implemented flow:
 7. Draw an orange diamond above the bar for relative volume without ATR momentum.
 8. Draw an aqua square above the bar for bullish ATR momentum plus relative volume.
 9. Draw a purple square below the bar for bearish ATR momentum plus relative volume.
-10. If trading is enabled and a new momentum marker was drawn, place a matching market order.
+10. If trading is enabled and a new square marker was drawn, place a matching market order.
 11. Set stop loss from `ATR * g_StopLossATRMultiple`.
 12. Set take profit from stop distance times `g_TakeProfitSLMultiple`.
 13. Calculate volume from fixed starting-balance risk using `g_StartingBalance` and `g_RiskPercentOfBalance`.

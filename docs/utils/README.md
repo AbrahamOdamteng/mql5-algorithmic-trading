@@ -173,7 +173,7 @@ Default hyperparameters:
 - IS: `36` months.
 - Validation: `3` months.
 - OOS: `3` months.
-- Primary OOS horizon: first `3` months.
+- Primary OOS horizon: full `3` months.
 - Rolling step: `1` month.
 
 Restart behavior:
@@ -181,6 +181,7 @@ Restart behavior:
 - Rerun the same command to resume.
 - Completed optimizer XML files and fixed-test `.xml.htm` reports are skipped.
 - Validation ranking selects exactly one OOS candidate per completed window; it does not use a validation pass/fail filter that can select nothing.
+- `-ValidationSelectionMode` can be `Score`, `Profit`, `Trades`, `LowestTrades`, `PositiveLowestTrades`, `PositiveLowestTradesThenDD`, `PositiveBestRatio`, `LowestDD`, or `HighestDD`. Rerunning with a different mode reuses completed optimizer and validation reports, then writes mode-specific selection/OOS CSV artifacts.
 - Unprofitable OOS reports are recorded and do not stop the runner.
 
 Useful options:
@@ -188,9 +189,22 @@ Useful options:
 - `-MaxWindows 1` limits the session to one monthly window.
 - `-MaxFixedTests 10` limits fixed validation/OOS tests in the current session.
 - `-StartAtWindow 25` starts scanning from a later monthly window.
+- `-ValidationSelectionMode Trades` selects the validation candidate with the highest trade count, using deterministic tie-breakers.
+- `-ValidationSelectionMode LowestTrades` selects the validation candidate with the lowest trade count, using deterministic tie-breakers.
+- `-ValidationSelectionMode PositiveLowestTrades` selects the lowest-trade profitable validation candidate, falling back to lowest trades if none are profitable.
+- `-ValidationSelectionMode PositiveLowestTradesThenDD` selects the lowest-trade profitable validation candidate, then uses lowest DD as the first tie-breaker.
+- `-ValidationSelectionMode PositiveBestRatio` selects the profitable validation candidate with the highest profit-to-DD ratio.
 - `-PrepareOnly` writes the windows file and current optimizer config without launching MT5.
 
 Outputs are written under the terminal data folder in `reports\tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m` by default.
+
+Current best tested selection mode for the first six EURUSD windows is:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ThreeDayTrendSignal\Run-TDTS-EURUSD-EphemeralGenerator.ps1 -MaxWindows 6 -ValidationSelectionMode PositiveLowestTrades
+```
+
+This mode is positive across the first six OOS windows but still has three losing late windows, so treat it as a lead diagnostic mode, not a promoted process.
 
 ## Legacy Rolling Manifold Cycle Runner
 

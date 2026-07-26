@@ -14,6 +14,8 @@ param(
   [int]$PrimaryOosMonths = 3,
   [int]$StepMonths = 1,
   [int]$TopOptimizerCandidates = 25,
+  [ValidateSet('Score', 'Profit', 'Trades', 'LowestTrades', 'PositiveLowestTrades', 'PositiveLowestTradesThenDD', 'PositiveBestRatio', 'LowestDD', 'HighestDD')]
+  [string]$ValidationSelectionMode = 'Score',
   [double]$StartingDeposit = 100000.0,
   [int]$OptimizationTimeoutMinutes = 1440,
   [int]$MaxRuntimeMinutes = 20,
@@ -234,6 +236,9 @@ function New-TestSetFile {
   Set-InputLine -Lines $lines -Name 'g_ATR_Period' -Value $Test.ATR
   Set-InputLine -Lines $lines -Name 'g_ATR_Multiplier' -Value $Test.ATRMult
   Set-InputLine -Lines $lines -Name 'g_ContiguousCandles' -Value $Test.ContiguousCandles
+  Set-InputLine -Lines $lines -Name 'g_RelVolLength' -Value (Get-PropValue -Object $Test -Names @('RelVolLength') -Default 20)
+  Set-InputLine -Lines $lines -Name 'g_RelVolCandles' -Value (Get-PropValue -Object $Test -Names @('RelVolCandles') -Default 1)
+  Set-InputLine -Lines $lines -Name 'g_RelVolThreshold' -Value (Get-PropValue -Object $Test -Names @('RelVolThreshold') -Default 1.5)
   Set-InputLine -Lines $lines -Name 'g_StopLossATRMultiple' -Value $Test.StopLossATRMultiple
   Set-InputLine -Lines $lines -Name 'g_TakeProfitSLMultiple' -Value $Test.TakeProfitSLMultiple
   Set-InputLine -Lines $lines -Name 'g_EnableTrading' -Value 'true'
@@ -351,6 +356,9 @@ function New-OptimizerCandidates {
       ATR = [int](Get-PropValue -Object $is -Names @('g_ATR_Period') -Default 0)
       ATRMult = [double](Get-PropValue -Object $is -Names @('g_ATR_Multiplier') -Default 0.0)
       ContiguousCandles = [int](Get-PropValue -Object $is -Names @('g_ContiguousCandles') -Default 0)
+      RelVolLength = [int](Get-PropValue -Object $is -Names @('g_RelVolLength') -Default 20)
+      RelVolCandles = [int](Get-PropValue -Object $is -Names @('g_RelVolCandles') -Default 1)
+      RelVolThreshold = [double](Get-PropValue -Object $is -Names @('g_RelVolThreshold') -Default 1.5)
       StopLossATRMultiple = [double](Get-PropValue -Object $is -Names @('g_StopLossATRMultiple') -Default 0.0)
       TakeProfitSLMultiple = [double](Get-PropValue -Object $is -Names @('g_TakeProfitSLMultiple') -Default 0.0)
     }
@@ -382,6 +390,9 @@ function New-ValidationManifest {
       ATR = $candidate.ATR
       ATRMult = $candidate.ATRMult
       ContiguousCandles = $candidate.ContiguousCandles
+      RelVolLength = Get-PropValue -Object $candidate -Names @('RelVolLength') -Default 20
+      RelVolCandles = Get-PropValue -Object $candidate -Names @('RelVolCandles') -Default 1
+      RelVolThreshold = Get-PropValue -Object $candidate -Names @('RelVolThreshold') -Default 1.5
       StopLossATRMultiple = $candidate.StopLossATRMultiple
       TakeProfitSLMultiple = $candidate.TakeProfitSLMultiple
       ISScore = $candidate.ISScore
@@ -401,8 +412,9 @@ function New-OosManifest {
   param([object]$Window, [object]$Selected, [string]$ReportSubdir)
 
   $oosStart = [datetime]::ParseExact($Window.OosStart, 'yyyy.MM.dd', [System.Globalization.CultureInfo]::InvariantCulture)
+  $oosDays = $OosMonths * 30
   $periods = @(
-    [pscustomobject]@{ Segment = 'OOS_0_90'; From = $oosStart; To = $oosStart.AddMonths($OosMonths); HorizonType = 'PrimaryAndSlice'; MonthsFrom = 0; MonthsTo = $OosMonths }
+    [pscustomobject]@{ Segment = "OOS_0_$oosDays"; From = $oosStart; To = $oosStart.AddMonths($OosMonths); HorizonType = 'Primary'; MonthsFrom = 0; MonthsTo = $OosMonths }
   )
 
   $rows = [System.Collections.Generic.List[object]]::new()
@@ -418,6 +430,7 @@ function New-OosManifest {
       WindowIndex = $Window.WindowIndex
       WindowId = $Window.WindowId
       Stage = 'OOS'
+      ValidationSelectionMode = $ValidationSelectionMode
       ManifoldId = $Selected.ManifoldId
       Pass = $Selected.Pass
       Symbol = $Symbol
@@ -432,6 +445,9 @@ function New-OosManifest {
       ATR = $Selected.ATR
       ATRMult = $Selected.ATRMult
       ContiguousCandles = $Selected.ContiguousCandles
+      RelVolLength = Get-PropValue -Object $Selected -Names @('RelVolLength') -Default 20
+      RelVolCandles = Get-PropValue -Object $Selected -Names @('RelVolCandles') -Default 1
+      RelVolThreshold = Get-PropValue -Object $Selected -Names @('RelVolThreshold') -Default 1.5
       StopLossATRMultiple = $Selected.StopLossATRMultiple
       TakeProfitSLMultiple = $Selected.TakeProfitSLMultiple
       ValidationScore = $Selected.ValidationScore
@@ -597,6 +613,9 @@ function Read-ManifestReportRows {
       ATR = $test.ATR
       ATRMult = $test.ATRMult
       ContiguousCandles = $test.ContiguousCandles
+      RelVolLength = Get-PropValue -Object $test -Names @('RelVolLength') -Default 20
+      RelVolCandles = Get-PropValue -Object $test -Names @('RelVolCandles') -Default 1
+      RelVolThreshold = Get-PropValue -Object $test -Names @('RelVolThreshold') -Default 1.5
       StopLossATRMultiple = $test.StopLossATRMultiple
       TakeProfitSLMultiple = $test.TakeProfitSLMultiple
     }
@@ -620,11 +639,47 @@ function Get-ValidationScore {
 function Select-OneValidationCandidate {
   param([object[]]$ValidationRows)
 
-  $ranked = @($ValidationRows | ForEach-Object {
+  $scoredRows = @($ValidationRows | ForEach-Object {
     $score = Get-ValidationScore -Row $_
     $_ | Add-Member -NotePropertyName ValidationScore -NotePropertyValue $score -Force
     $_
-  } | Sort-Object @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = 'Profit'; Descending = $true }, @{ Expression = 'EquityDDPct'; Ascending = $true }, @{ Expression = 'Trades'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+  })
+
+  $ranked = switch ($ValidationSelectionMode) {
+    'Profit' {
+      @($scoredRows | Sort-Object @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'Trades' {
+      @($scoredRows | Sort-Object @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'LowestTrades' {
+      @($scoredRows | Sort-Object @{ Expression = { [int]$_.Trades }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'PositiveLowestTrades' {
+      $positiveRows = @($scoredRows | Where-Object { [double]$_.Profit -gt 0.0 })
+      if ($positiveRows.Count -eq 0) { $positiveRows = $scoredRows }
+      @($positiveRows | Sort-Object @{ Expression = { [int]$_.Trades }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'PositiveLowestTradesThenDD' {
+      $positiveRows = @($scoredRows | Where-Object { [double]$_.Profit -gt 0.0 })
+      if ($positiveRows.Count -eq 0) { $positiveRows = $scoredRows }
+      @($positiveRows | Sort-Object @{ Expression = { [int]$_.Trades }; Ascending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'PositiveBestRatio' {
+      $positiveRows = @($scoredRows | Where-Object { [double]$_.Profit -gt 0.0 })
+      if ($positiveRows.Count -eq 0) { $positiveRows = $scoredRows }
+      @($positiveRows | Sort-Object @{ Expression = { [double]$_.Ratio }; Descending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'LowestDD' {
+      @($scoredRows | Sort-Object @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'HighestDD' {
+      @($scoredRows | Sort-Object @{ Expression = { [double]$_.EquityDDPct }; Descending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    default {
+      @($scoredRows | Sort-Object @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+  }
 
   $rank = 1
   foreach ($row in $ranked) {
@@ -650,6 +705,7 @@ function Export-WindowSelection {
     OosStart = $Window.OosStart
     OosPrimaryEnd = $Window.OosPrimaryEnd
     OosEnd = $Window.OosEnd
+    ValidationSelectionMode = $ValidationSelectionMode
     SelectionStatus = if ($null -ne $Selected) { 'SelectedOne' } else { 'NoValidationRows' }
     ManifoldId = if ($null -ne $Selected) { $Selected.ManifoldId } else { '' }
     Pass = if ($null -ne $Selected) { $Selected.Pass } else { '' }
@@ -664,6 +720,9 @@ function Export-WindowSelection {
     ATR = if ($null -ne $Selected) { $Selected.ATR } else { '' }
     ATRMult = if ($null -ne $Selected) { $Selected.ATRMult } else { '' }
     ContiguousCandles = if ($null -ne $Selected) { $Selected.ContiguousCandles } else { '' }
+    RelVolLength = if ($null -ne $Selected) { Get-PropValue -Object $Selected -Names @('RelVolLength') -Default 20 } else { '' }
+    RelVolCandles = if ($null -ne $Selected) { Get-PropValue -Object $Selected -Names @('RelVolCandles') -Default 1 } else { '' }
+    RelVolThreshold = if ($null -ne $Selected) { Get-PropValue -Object $Selected -Names @('RelVolThreshold') -Default 1.5 } else { '' }
     StopLossATRMultiple = if ($null -ne $Selected) { $Selected.StopLossATRMultiple } else { '' }
     TakeProfitSLMultiple = if ($null -ne $Selected) { $Selected.TakeProfitSLMultiple } else { '' }
   }
@@ -682,6 +741,9 @@ $reportSubdir = "reports\$ExperimentId"
 $windowsPath = Join-Path $experimentDir 'windows.csv'
 $selectionSummaryPath = Join-Path $experimentDir 'selection_summary.csv'
 $oosSummaryPath = Join-Path $experimentDir 'oos_summary.csv'
+$safeSelectionMode = Get-SafeId $ValidationSelectionMode
+$selectionSummaryForModePath = Join-Path $experimentDir "selection_summary_$safeSelectionMode.csv"
+$oosSummaryForModePath = Join-Path $experimentDir "oos_summary_$safeSelectionMode.csv"
 $fixedProgressPath = Join-Path $experimentDir 'fixed_test_progress.csv'
 $optimizerProgressPath = Join-Path $experimentDir 'optimizer_progress.csv'
 
@@ -705,7 +767,7 @@ Write-Host "Directory: $experimentDir"
 Write-Host "Symbol: $Symbol $Period"
 Write-Host "Hyperparameters: IS=$ISMonths months, VAL=$ValidationMonths months, OOS=$OosMonths months, primary OOS=$PrimaryOosMonths months, step=$StepMonths month(s)"
 Write-Host "Windows: $($windows.Count) ($($windows[0].OosStart) -> $($windows[-1].OosStart))"
-Write-Host "Validation rule: rank every completed VAL report and select exactly one candidate per window. No VAL pass/fail filter is applied."
+Write-Host "Validation rule: rank every completed VAL report by $ValidationSelectionMode and select exactly one candidate per window. No VAL pass/fail filter is applied."
 
 if ($PrepareOnly) {
   $firstRunnable = @($windows | Where-Object { [int]$_.WindowIndex -ge $StartAtWindow } | Select-Object -First 1)
@@ -766,6 +828,7 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
   if ($validationCandidates.Count -eq 0) {
     Write-Host "No optimizer candidates found for $($window.WindowId). Skipping VAL/OOS for this window."
     Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir 'selected_candidate.csv')
+    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir "selected_candidate_$safeSelectionMode.csv")
     $windowsProcessedThisSession++
     continue
   }
@@ -773,6 +836,7 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
   $validationManifest = @(New-ValidationManifest -Window $window -Candidates $validationCandidates -ReportSubdir $reportSubdir)
   $validationManifestPath = Join-Path $windowDir 'validation_manifest.csv'
   $validationResultsPath = Join-Path $windowDir 'validation_results_ranked.csv'
+  $validationResultsForModePath = Join-Path $windowDir "validation_results_ranked_$safeSelectionMode.csv"
   $validationManifest | Export-Csv -LiteralPath $validationManifestPath -NoTypeInformation -Encoding ASCII
 
   if ($MaxFixedTests -gt 0 -and $fixedTestsRunThisSession -ge $MaxFixedTests) {
@@ -792,18 +856,24 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
   if ($null -eq $selected) {
     Write-Host "No validation rows could be read for $($window.WindowId). OOS skipped."
     Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir 'selected_candidate.csv')
+    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir "selected_candidate_$safeSelectionMode.csv")
     $windowsProcessedThisSession++
     continue
   }
 
-  $validationRows | Sort-Object @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true } | Export-Csv -LiteralPath $validationResultsPath -NoTypeInformation -Encoding ASCII
+  $validationRows | Sort-Object @{ Expression = 'ValidationRank'; Ascending = $true }, @{ Expression = 'Pass'; Ascending = $true } | Export-Csv -LiteralPath $validationResultsPath -NoTypeInformation -Encoding ASCII
+  $validationRows | Sort-Object @{ Expression = 'ValidationRank'; Ascending = $true }, @{ Expression = 'Pass'; Ascending = $true } | Export-Csv -LiteralPath $validationResultsForModePath -NoTypeInformation -Encoding ASCII
   Export-WindowSelection -Window $window -Selected $selected -Path (Join-Path $windowDir 'selected_candidate.csv')
-  Write-Host "Selected exactly one OOS candidate: $($selected.ManifoldId) score=$($selected.ValidationScore) VAL profit=$($selected.Profit) DD=$($selected.EquityDDPct) trades=$($selected.Trades)"
+  Export-WindowSelection -Window $window -Selected $selected -Path (Join-Path $windowDir "selected_candidate_$safeSelectionMode.csv")
+  Write-Host "Selected exactly one OOS candidate by ${ValidationSelectionMode}: $($selected.ManifoldId) score=$($selected.ValidationScore) VAL profit=$($selected.Profit) DD=$($selected.EquityDDPct) trades=$($selected.Trades)"
 
   $oosManifest = @(New-OosManifest -Window $window -Selected $selected -ReportSubdir $reportSubdir)
   $oosManifestPath = Join-Path $windowDir 'oos_manifest.csv'
   $oosResultsPath = Join-Path $windowDir 'oos_results.csv'
+  $oosManifestForModePath = Join-Path $windowDir "oos_manifest_$safeSelectionMode.csv"
+  $oosResultsForModePath = Join-Path $windowDir "oos_results_$safeSelectionMode.csv"
   $oosManifest | Export-Csv -LiteralPath $oosManifestPath -NoTypeInformation -Encoding ASCII
+  $oosManifest | Export-Csv -LiteralPath $oosManifestForModePath -NoTypeInformation -Encoding ASCII
 
   if ($MaxFixedTests -gt 0 -and $fixedTestsRunThisSession -ge $MaxFixedTests) {
     Write-Host "Fixed-test session limit reached before OOS stage completed for $($window.WindowId). Rerun the same command to resume."
@@ -819,6 +889,7 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
 
   $oosRows = @(Read-ManifestReportRows -Manifest $oosManifest -ReportRoot $reportRoot)
   $oosRows | Export-Csv -LiteralPath $oosResultsPath -NoTypeInformation -Encoding ASCII
+  $oosRows | Export-Csv -LiteralPath $oosResultsForModePath -NoTypeInformation -Encoding ASCII
   Write-Host "OOS metrics recorded for $($window.WindowId). OOS profitability is not a stop condition."
 
   $windowsProcessedThisSession++
@@ -828,13 +899,19 @@ $selectionRows = @()
 $oosRowsAll = @()
 foreach ($window in $windows) {
   $windowDir = Join-Path $experimentDir $window.WindowId
-  $selectionPath = Join-Path $windowDir 'selected_candidate.csv'
-  $oosPath = Join-Path $windowDir 'oos_results.csv'
+  $selectionPath = Join-Path $windowDir "selected_candidate_$safeSelectionMode.csv"
+  $oosPath = Join-Path $windowDir "oos_results_$safeSelectionMode.csv"
   if (Test-Path -LiteralPath $selectionPath) { $selectionRows += @(Import-Csv -LiteralPath $selectionPath) }
   if (Test-Path -LiteralPath $oosPath) { $oosRowsAll += @(Import-Csv -LiteralPath $oosPath) }
 }
-if ($selectionRows.Count -gt 0) { $selectionRows | Export-Csv -LiteralPath $selectionSummaryPath -NoTypeInformation -Encoding ASCII }
-if ($oosRowsAll.Count -gt 0) { $oosRowsAll | Export-Csv -LiteralPath $oosSummaryPath -NoTypeInformation -Encoding ASCII }
+if ($selectionRows.Count -gt 0) {
+  $selectionRows | Export-Csv -LiteralPath $selectionSummaryPath -NoTypeInformation -Encoding ASCII
+  $selectionRows | Export-Csv -LiteralPath $selectionSummaryForModePath -NoTypeInformation -Encoding ASCII
+}
+if ($oosRowsAll.Count -gt 0) {
+  $oosRowsAll | Export-Csv -LiteralPath $oosSummaryPath -NoTypeInformation -Encoding ASCII
+  $oosRowsAll | Export-Csv -LiteralPath $oosSummaryForModePath -NoTypeInformation -Encoding ASCII
+}
 
 Write-Host ''
 Write-Host "Session complete or paused by limits. Windows processed this session: $windowsProcessedThisSession. Fixed tests run this session: $fixedTestsRunThisSession."

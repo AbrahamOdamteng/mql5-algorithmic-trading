@@ -144,10 +144,11 @@ void OnTick()
 void ProcessLatestClosedBar()
 {
    bool hasMomentum = false;
+   bool hasRelVol = false;
    bool bullishMomentum = false;
    double atrValue = 0.0;
 
-   if(DrawSignalMarkerForShift(1, hasMomentum, bullishMomentum, atrValue) && hasMomentum && g_EnableTrading)
+   if(DrawSignalMarkerForShift(1, hasMomentum, hasRelVol, bullishMomentum, atrValue) && hasMomentum && hasRelVol && g_EnableTrading)
       ExecuteMarketOrder(bullishMomentum, atrValue);
 }
 
@@ -182,16 +183,17 @@ void DrawHistoricalMomentumMarkers()
    for(int shift = oldestUsableShift; shift >= 1; shift--)
    {
       bool hasMomentum = false;
+      bool hasRelVol = false;
       bool bullishMomentum = false;
       double atrValue = 0.0;
-      DrawSignalMarker(rates, atrValues, shift, hasMomentum, bullishMomentum, atrValue);
+      DrawSignalMarker(rates, atrValues, shift, hasMomentum, hasRelVol, bullishMomentum, atrValue);
    }
 
    ChartRedraw(0);
 }
 
 //+------------------------------------------------------------------+
-bool DrawSignalMarkerForShift(const int shift, bool &hasMomentum, bool &bullishMomentum, double &atrValue)
+bool DrawSignalMarkerForShift(const int shift, bool &hasMomentum, bool &hasRelVol, bool &bullishMomentum, double &atrValue)
 {
    MqlRates rates[];
    double atrValues[];
@@ -209,25 +211,26 @@ bool DrawSignalMarkerForShift(const int shift, bool &hasMomentum, bool &bullishM
    ArraySetAsSeries(rates, true);
    ArraySetAsSeries(atrValues, true);
 
-   bool markerDrawn = DrawSignalMarker(rates, atrValues, shift, hasMomentum, bullishMomentum, atrValue);
+   bool markerDrawn = DrawSignalMarker(rates, atrValues, shift, hasMomentum, hasRelVol, bullishMomentum, atrValue);
    ChartRedraw(0);
    return markerDrawn;
 }
 
 //+------------------------------------------------------------------+
-bool DrawSignalMarker(MqlRates &rates[], double &atrValues[], const int shift, bool &hasMomentum, bool &bullishMomentum, double &signalAtrValue)
+bool DrawSignalMarker(MqlRates &rates[], double &atrValues[], const int shift, bool &hasMomentum, bool &hasRelVol, bool &bullishMomentum, double &signalAtrValue)
 {
    hasMomentum = false;
+   hasRelVol = false;
    bullishMomentum = false;
    signalAtrValue = 0.0;
 
-   bool relVolSignal = IsRelativeVolumeSignal(rates, shift);
+   hasRelVol = IsRelativeVolumeSignal(rates, shift);
    hasMomentum = GetMomentumSignal(rates, atrValues, shift, bullishMomentum, signalAtrValue);
 
-   if(!hasMomentum && !relVolSignal)
+   if(!hasMomentum && !hasRelVol)
       return false;
 
-   if(hasMomentum && relVolSignal)
+   if(hasMomentum && hasRelVol)
       return DrawMarker(rates[shift], signalAtrValue, bullishMomentum ? "BullSquare_" : "BearSquare_", bullishMomentum, 110, bullishMomentum ? clrAqua : clrPurple);
 
    if(hasMomentum)

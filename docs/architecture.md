@@ -9,8 +9,8 @@ It currently implements ATR momentum chart drawing, relative-volume chart drawin
 - Creates an ATR handle with `iATR(_Symbol, _Period, g_ATR_Period)`.
 - Draws historical ATR momentum and relative-volume markers during `OnInit()`.
 - On each new bar, evaluates the latest closed candle and draws a marker if the momentum or relative-volume condition passes.
-- Uses `CTrade` to place buy market orders from new bullish momentum markers and sell market orders from new bearish momentum markers when `g_EnableTrading` is true.
-- Does not place trades from relative-volume-only orange diamonds.
+- Uses `CTrade` to place buy market orders from new bullish ATR momentum plus relative-volume squares and sell market orders from new bearish ATR momentum plus relative-volume squares when `g_EnableTrading` is true.
+- Does not place trades from momentum-only circles or relative-volume-only orange diamonds.
 - Sets stop loss from `ATR * g_StopLossATRMultiple` and take profit from stop distance times `g_TakeProfitSLMultiple`.
 - Calculates lot size from fixed starting-balance risk: `g_StartingBalance * g_RiskPercentOfBalance / 100.0`, divided by the one-lot loss at the stop price.
 - Does not trade historical markers drawn during initialization.
@@ -22,6 +22,14 @@ abs(current close - open from contiguousCandles - 1 bars ago) >= ATR(14) * ATR M
 ```
 
 When building the contiguous candle block, the EA excludes older candles beyond the first adjacent high/low range gap greater than `ATR * GAP_ATR_SKIP_FRACTION`, with `GAP_ATR_SKIP_FRACTION = 0.1` hardcoded in the EA.
+
+Current implemented relative-volume condition:
+
+```text
+sum(current-bar tick volume / average same-intraday-slot tick volume over g_RelVolLength prior days, g_RelVolCandles bars) >= g_RelVolThreshold
+```
+
+The genetic optimizer currently enables `g_RelVolLength`, `g_RelVolCandles`, and `g_RelVolThreshold`; fixed validation and OOS tests carry those optimized values forward.
 
 Legacy WeekHighLow architecture is retained below for reference only.
 

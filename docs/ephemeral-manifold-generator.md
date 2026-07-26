@@ -208,8 +208,8 @@ Default process version:
 - IS: `36` months.
 - Validation: `3` months.
 - OOS: `3` months.
-- Primary deployment horizon: first `3` OOS months.
-- Alpha-decay diagnostics beyond the first `3` OOS months are disabled for this process version.
+- Primary deployment horizon: the full `3` OOS months.
+- Alpha-decay diagnostics are disabled for this process version; the runner records one OOS report for the selected manifold.
 - Step size: `1` month.
 - First OOS start: `2020.07.01`.
 - Last OOS start: `2025.05.01`.
@@ -219,9 +219,16 @@ Validation selection rule:
 
 - The optimizer candidates are ranked by IS score and the top `25` are run through validation by default.
 - Validation does not apply a pass/fail filter that can select nothing.
-- Every completed validation report is ranked by deterministic validation score.
+- Every completed validation report is ranked by the selected deterministic validation mode. The default is `Score`; supported modes are `Score`, `Profit`, `Trades`, `LowestTrades`, `PositiveLowestTrades`, `PositiveLowestTradesThenDD`, `PositiveBestRatio`, `LowestDD`, and `HighestDD`.
 - Exactly one candidate is selected for OOS whenever validation reports exist for the window.
 - If all validation candidates lose money, the least-bad ranked candidate is still selected. This preserves the research rule that the generator must make one deployment decision per window.
+
+Current reselection finding from the first six EURUSD windows:
+
+- `PositiveLowestTrades` is the current lead mode.
+- It requires profitable validation candidates, then selects the lowest validation trade count with deterministic tie-breakers.
+- First six OOS windows produced net `+9,214.41`, `3 / 6` profitable windows, worst DD `22.65%`, and `465` trades.
+- The process is still not robust enough to promote because OOS starts `2020.10.01`, `2020.11.01`, and `2020.12.01` were all negative.
 
 Default run command:
 
@@ -234,6 +241,9 @@ Restart behavior:
 - Rerun the same command to resume.
 - Existing optimizer XML files are skipped.
 - Existing validation and OOS fixed-test reports are skipped.
+- Generated optimizer and validation reports are kept for later reselection experiments.
+- To reuse completed IS/VAL work but choose OOS manifolds differently, rerun with `-ValidationSelectionMode Profit`, `-ValidationSelectionMode Trades`, `-ValidationSelectionMode LowestTrades`, `-ValidationSelectionMode PositiveLowestTrades`, `-ValidationSelectionMode PositiveLowestTradesThenDD`, `-ValidationSelectionMode PositiveBestRatio`, `-ValidationSelectionMode LowestDD`, or `-ValidationSelectionMode HighestDD`.
+- Mode-specific CSV artifacts are written, such as `selected_candidate_Trades.csv`, `validation_results_ranked_Trades.csv`, and `oos_results_Trades.csv`, so alternate selection runs can be compared later.
 - If the run is stopped during an optimizer, that monthly optimizer is rerun because no complete optimizer XML exists.
 - If the run is stopped during a fixed test, only the missing report is rerun.
 - Unprofitable OOS results are recorded and the runner continues to later windows. OOS profitability is not a stop condition.

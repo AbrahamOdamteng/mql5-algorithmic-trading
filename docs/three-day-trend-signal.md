@@ -22,7 +22,7 @@ The source indicator has three main components:
 2. Relative volume confirmation marker.
 3. Daily trend filter and final long/short signal marker.
 
-The initial MQL5 work drew chart markers only. Momentum-circle market orders are now explicitly enabled for genetic testing; final-signal trade logic should still wait for explicit approval.
+The initial MQL5 work drew chart markers only. Market orders are now explicitly enabled for genetic testing only when ATR momentum and relative volume occur together, producing square markers; final-signal trade logic should still wait for explicit approval.
 
 ## Research Context
 
@@ -45,7 +45,7 @@ Implemented so far:
 - Orange diamond marker for relative volume without ATR momentum.
 - Aqua square marker for bullish ATR momentum plus relative volume.
 - Purple square marker for bearish ATR momentum plus relative volume.
-- Optional market order execution for newly drawn momentum markers.
+- Optional market order execution for newly drawn ATR momentum plus relative-volume square markers.
 - No three-day trend filter.
 - No final long/short triangle signals.
 
@@ -57,7 +57,7 @@ abs(current close - open from contiguousCandles - 1 bars ago) >= ATR(14) * ATR M
 
 When building the contiguous candle block, the EA checks the high/low range gap between each adjacent pair. If a non-overlapping range gap is greater than `ATR * GAP_ATR_SKIP_FRACTION`, older candles beyond that gap are excluded from the momentum calculation. `GAP_ATR_SKIP_FRACTION` is hardcoded to `0.1`.
 
-Default inputs mirror the PineScript momentum defaults:
+Default momentum inputs mirror the PineScript momentum defaults:
 
 ```text
 g_ATR_Period = 14
@@ -65,13 +65,23 @@ g_ATR_Multiplier = 5.0
 g_ContiguousCandles = 2
 ```
 
+Current relative-volume inputs:
+
+```text
+g_RelVolLength = 20
+g_RelVolCandles = 1
+g_RelVolThreshold = 1.5
+```
+
+Relative volume uses MT5 tick volume and compares each bar against the same intraday slot over prior days. The genetic optimizer currently searches RelVol ranges from `Profiles/Tester/ThreeDayTrendSignal_EURUSD_Genetic_20260718.set`.
+
 The EA processes closed candles. On initialization it draws recent historical momentum markers, then on each new bar it evaluates the latest closed bar.
 
 Trade execution for genetic testing:
 
-- `g_EnableTrading` controls whether newly drawn momentum markers place market orders.
-- Blue momentum circles place buy market orders.
-- Red momentum circles place sell market orders.
+- `g_EnableTrading` controls whether newly drawn ATR momentum plus relative-volume square markers place market orders.
+- Blue momentum circles do not place trades.
+- Red momentum circles do not place trades.
 - Aqua bullish momentum plus relative-volume squares place buy market orders.
 - Purple bearish momentum plus relative-volume squares place sell market orders.
 - Orange relative-volume-only diamonds do not place trades.
@@ -105,7 +115,7 @@ Use this order unless the user changes direction:
 3. Daily trend filter.
 4. Final long/short signal markers.
 5. Backtest analysis and trade logging support if needed.
-6. Order placement for final signals only after explicit user approval. Momentum-circle market orders are currently implemented for genetic testing.
+6. Order placement for final signals only after explicit user approval. Momentum plus relative-volume square market orders are currently implemented for genetic testing.
 
 ## Verification Notes
 
@@ -115,18 +125,20 @@ The first EA version compiled through MetaEditor with:
 0 errors, 0 warnings
 ```
 
-Latest compile status after relative volume markers were added: `0 errors, 0 warnings`.
+Latest compile status after square-only trade gating was added: `0 errors, 0 warnings`.
 
 Future changes should continue compiling cleanly before being considered complete.
 
 ## Prepared Tester Setups
 
 - `Files/ThreeDayTrendSignal/TDTS_EURUSD_Genetic_20260718.ini`: prepared EURUSD H1 genetic optimization config for `2000.01.01 -> 2018.01.01` with forward mode enabled. Do not run automatically from assistant sessions unless explicitly requested.
-- `Profiles/Tester/ThreeDayTrendSignal_EURUSD_Genetic_20260718.set`: matching optimizer input preset for ATR period, ATR momentum multiplier, contiguous candle count, stop-loss ATR multiple, and take-profit SL multiple. Current lot sizing uses fixed starting-balance risk with `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0`.
+- `Profiles/Tester/ThreeDayTrendSignal_EURUSD_Genetic_20260718.set`: matching optimizer input preset for ATR period, ATR momentum multiplier, contiguous candle count, relative-volume length/candles/threshold, stop-loss ATR multiple, and take-profit SL multiple. Current lot sizing uses fixed starting-balance risk with `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0`.
 - `Files/ThreeDayTrendSignal/Run-TDTS-WalkForwardRestartable.ps1`: restartable TDTS rolling-cycle runner from the older EURUSD-discovery plus cross-symbol-promotion workflow. Treat it as legacy scaffolding unless it is revised for the new per-symbol ephemeral-generator process.
 - `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1`: active restartable EURUSD baseline generator runner. Defaults are `36m` IS, `3m` validation, `3m` OOS, `3m` primary OOS horizon, and `1m` rolling step. Validation ranking always promotes exactly one OOS candidate when validation reports exist.
 - `Files/ThreeDayTrendSignal/tdts_ephemeral_optimizer_current.ini`: current generated optimizer config for the active EURUSD generator runner.
 
-Testing caveat: the first completed `2026-07-18` EURUSD H1 genetic run used the earlier fixed `0.10` lot model. Rerun the genetic test after the fixed-balance risk-sizing change before promoting candidates from that result.
+Latest six-window EURUSD generator result: under process `tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m`, the best tested validation selection mode is `PositiveLowestTrades`, with net OOS `+9,214.41` across the first six monthly OOS windows. This is positive but not robust because the last three windows are all negative.
+
+Testing caveat: the first completed `2026-07-18` EURUSD H1 genetic run used the earlier fixed `0.10` lot model and predates RelVol plus square-only trade gating. Treat it as superseded historical evidence; current generator work should use `tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m` or a later named process version.
 
 Latest rolling-cycle result under the older workflow: `tdts_rm_2018_5y_1y_1y` used optimization `2012 -> 2017`, validation `2017 -> 2018`, and OOS `2018 -> 2019` across FX28. It selected `25` EURUSD optimizer candidates, promoted `21` candidate-symbol pairs to OOS, and produced one accepted OOS unit: `TDTS_Pass262` on `EURUSD` with OOS profit `15,178.89`, DD `7.28%`, ratio `2.085`, and `48` trades. Trading all promoted pairs was negative in aggregate, so treat this as historical context rather than the active process.
