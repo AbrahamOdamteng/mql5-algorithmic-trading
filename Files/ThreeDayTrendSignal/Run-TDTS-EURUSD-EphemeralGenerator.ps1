@@ -14,8 +14,18 @@ param(
   [int]$PrimaryOosMonths = 3,
   [int]$StepMonths = 1,
   [int]$TopOptimizerCandidates = 25,
-  [ValidateSet('Score', 'Profit', 'Trades', 'LowestTrades', 'PositiveLowestTrades', 'PositiveLowestTradesThenDD', 'PositiveBestRatio', 'LowestDD', 'HighestDD')]
+  [ValidateSet('Score', 'Profit', 'Trades', 'LowestTrades', 'PositiveLowestTrades', 'PositiveLowestTradesThenDD', 'PositiveLowestTradesHardGates', 'PositiveLowestTradesQualityFloor', 'PositiveLowestTradesFinalMonth', 'PositiveBestRatio', 'PositiveHighestPF', 'PositiveTradeBand', 'LowestDD', 'HighestDD')]
   [string]$ValidationSelectionMode = 'Score',
+  [int]$TradeBandMin = 60,
+  [int]$TradeBandMax = 120,
+  [double]$HardGateMinProfit = 0.0,
+  [double]$HardGateMinProfitFactor = 1.10,
+  [double]$HardGateMaxDDPct = 15.0,
+  [int]$HardGateMinTrades = 40,
+  [double]$QualityFloorMinProfit = 0.0,
+  [double]$QualityFloorMinRatio = 0.50,
+  [double]$QualityFloorMinProfitFactor = 1.10,
+  [double]$FinalMonthMinProfit = 0.0,
   [double]$StartingDeposit = 100000.0,
   [int]$OptimizationTimeoutMinutes = 1440,
   [int]$MaxRuntimeMinutes = 20,
@@ -408,6 +418,47 @@ function New-ValidationManifest {
   return $rows
 }
 
+function New-FinalMonthValidationManifest {
+  param([object]$Window, [object[]]$Candidates, [string]$ReportSubdir)
+
+  $validationEnd = [datetime]::ParseExact($Window.ValidationEnd, 'yyyy.MM.dd', [System.Globalization.CultureInfo]::InvariantCulture)
+  $finalMonthStart = Get-Mt5Date $validationEnd.AddMonths(-1)
+  $finalMonthEnd = $Window.ValidationEnd
+  $dateLabel = ($finalMonthStart -replace '\.', '') + '_' + ($finalMonthEnd -replace '\.', '')
+
+  $rows = [System.Collections.Generic.List[object]]::new()
+  $index = 1
+  foreach ($candidate in $Candidates) {
+    $report = "$ReportSubdir\validation\$($Window.WindowId)_$Symbol`_$($candidate.ManifoldId)_VAL_FINAL_1M_$dateLabel.xml"
+    $rows.Add([pscustomobject]@{
+      TestIndex = $index
+      TestId = ('{0}_{1:D5}_{2}_VAL_FINAL_1M' -f $Window.WindowId, $index, $candidate.ManifoldId)
+      WindowIndex = $Window.WindowIndex
+      WindowId = $Window.WindowId
+      Stage = 'VAL_FINAL_1M'
+      ManifoldId = $candidate.ManifoldId
+      Pass = $candidate.Pass
+      Symbol = $Symbol
+      Segment = 'VAL_FINAL_1M'
+      FromDate = $finalMonthStart
+      ToDate = $finalMonthEnd
+      Report = $report
+      ExpectedReport = "$report.htm"
+      ATR = $candidate.ATR
+      ATRMult = $candidate.ATRMult
+      ContiguousCandles = $candidate.ContiguousCandles
+      RelVolLength = Get-PropValue -Object $candidate -Names @('RelVolLength') -Default 20
+      RelVolCandles = Get-PropValue -Object $candidate -Names @('RelVolCandles') -Default 1
+      RelVolThreshold = Get-PropValue -Object $candidate -Names @('RelVolThreshold') -Default 1.5
+      StopLossATRMultiple = $candidate.StopLossATRMultiple
+      TakeProfitSLMultiple = $candidate.TakeProfitSLMultiple
+    })
+    $index++
+  }
+
+  return $rows
+}
+
 function New-OosManifest {
   param([object]$Window, [object]$Selected, [string]$ReportSubdir)
 
@@ -637,7 +688,13 @@ function Get-ValidationScore {
 }
 
 function Select-OneValidationCandidate {
-  param([object[]]$ValidationRows)
+  param([object[]]$ValidationRows, [object[]]$FinalMonthRows = @())
+
+  $script:LastValidationSelectionStatus = 'SelectedOne'
+  if ($ValidationRows.Count -eq 0) {
+    $script:LastValidationSelectionStatus = 'NoValidationRows'
+    return $null
+  }
 
   $scoredRows = @($ValidationRows | ForEach-Object {
     $score = Get-ValidationScore -Row $_
@@ -665,10 +722,60 @@ function Select-OneValidationCandidate {
       if ($positiveRows.Count -eq 0) { $positiveRows = $scoredRows }
       @($positiveRows | Sort-Object @{ Expression = { [int]$_.Trades }; Ascending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
     }
+    'PositiveLowestTradesHardGates' {
+      $qualifiedRows = @($scoredRows | Where-Object {
+        [double]$_.Profit -gt $HardGateMinProfit -and
+        [double]$_.ProfitFactor -ge $HardGateMinProfitFactor -and
+        [double]$_.EquityDDPct -le $HardGateMaxDDPct -and
+        [int]$_.Trades -ge $HardGateMinTrades
+      })
+      if ($qualifiedRows.Count -eq 0) { $script:LastValidationSelectionStatus = 'NoCandidatesPassedHardGates' }
+      @($qualifiedRows | Sort-Object @{ Expression = { [int]$_.Trades }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'PositiveLowestTradesQualityFloor' {
+      $qualifiedRows = @($scoredRows | Where-Object {
+        [double]$_.Profit -gt $QualityFloorMinProfit -and
+        [double]$_.Ratio -ge $QualityFloorMinRatio -and
+        [double]$_.ProfitFactor -ge $QualityFloorMinProfitFactor
+      })
+      if ($qualifiedRows.Count -eq 0) { $script:LastValidationSelectionStatus = 'NoCandidatesPassedQualityFloor' }
+      @($qualifiedRows | Sort-Object @{ Expression = { [int]$_.Trades }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'PositiveLowestTradesFinalMonth' {
+      $finalMonthByManifold = @{}
+      foreach ($row in $FinalMonthRows) { $finalMonthByManifold[$row.ManifoldId] = $row }
+      $qualifiedRows = @($scoredRows | Where-Object {
+        $finalMonthByManifold.ContainsKey($_.ManifoldId) -and
+        [double]$_.Profit -gt 0.0 -and
+        [double]$finalMonthByManifold[$_.ManifoldId].Profit -gt $FinalMonthMinProfit
+      } | ForEach-Object {
+        $finalMonth = $finalMonthByManifold[$_.ManifoldId]
+        $_ | Add-Member -NotePropertyName FinalMonthValidationProfit -NotePropertyValue $finalMonth.Profit -Force
+        $_ | Add-Member -NotePropertyName FinalMonthValidationReturnPct -NotePropertyValue $finalMonth.ReturnPct -Force
+        $_ | Add-Member -NotePropertyName FinalMonthValidationDDPct -NotePropertyValue $finalMonth.EquityDDPct -Force
+        $_ | Add-Member -NotePropertyName FinalMonthValidationRatio -NotePropertyValue $finalMonth.Ratio -Force
+        $_ | Add-Member -NotePropertyName FinalMonthValidationTrades -NotePropertyValue $finalMonth.Trades -Force
+        $_ | Add-Member -NotePropertyName FinalMonthValidationProfitFactor -NotePropertyValue $finalMonth.ProfitFactor -Force
+        $_
+      })
+      if ($qualifiedRows.Count -eq 0) { $script:LastValidationSelectionStatus = 'NoCandidatesPassedFinalMonthConfirmation' }
+      @($qualifiedRows | Sort-Object @{ Expression = { [int]$_.Trades }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.FinalMonthValidationProfit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
     'PositiveBestRatio' {
       $positiveRows = @($scoredRows | Where-Object { [double]$_.Profit -gt 0.0 })
       if ($positiveRows.Count -eq 0) { $positiveRows = $scoredRows }
       @($positiveRows | Sort-Object @{ Expression = { [double]$_.Ratio }; Descending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'PositiveHighestPF' {
+      $positiveRows = @($scoredRows | Where-Object { [double]$_.Profit -gt 0.0 })
+      if ($positiveRows.Count -eq 0) { $positiveRows = $scoredRows }
+      @($positiveRows | Sort-Object @{ Expression = { [double]$_.ProfitFactor }; Descending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
+    }
+    'PositiveTradeBand' {
+      $bandRows = @($scoredRows | Where-Object { [double]$_.Profit -gt 0.0 -and [int]$_.Trades -ge $TradeBandMin -and [int]$_.Trades -le $TradeBandMax })
+      if ($bandRows.Count -eq 0) { $bandRows = @($scoredRows | Where-Object { [double]$_.Profit -gt 0.0 }) }
+      if ($bandRows.Count -eq 0) { $bandRows = $scoredRows }
+      @($bandRows | Sort-Object @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [int]$_.Trades }; Ascending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
     }
     'LowestDD' {
       @($scoredRows | Sort-Object @{ Expression = { [double]$_.EquityDDPct }; Ascending = $true }, @{ Expression = { [double]$_.Profit }; Descending = $true }, @{ Expression = { [int]$_.Trades }; Descending = $true }, @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = { [int]$_.Pass }; Ascending = $true })
@@ -687,12 +794,15 @@ function Select-OneValidationCandidate {
     $rank++
   }
 
-  if ($ranked.Count -eq 0) { return $null }
+  if ($ranked.Count -eq 0) {
+    if ($script:LastValidationSelectionStatus -eq 'SelectedOne') { $script:LastValidationSelectionStatus = 'NoValidationRows' }
+    return $null
+  }
   return $ranked[0]
 }
 
 function Export-WindowSelection {
-  param([object]$Window, [object]$Selected, [string]$Path)
+  param([object]$Window, [object]$Selected, [string]$Path, [string]$SelectionStatus = '')
 
   $row = [pscustomobject]@{
     WindowIndex = $Window.WindowIndex
@@ -706,7 +816,17 @@ function Export-WindowSelection {
     OosPrimaryEnd = $Window.OosPrimaryEnd
     OosEnd = $Window.OosEnd
     ValidationSelectionMode = $ValidationSelectionMode
-    SelectionStatus = if ($null -ne $Selected) { 'SelectedOne' } else { 'NoValidationRows' }
+    TradeBandMin = if ($ValidationSelectionMode -eq 'PositiveTradeBand') { $TradeBandMin } else { '' }
+    TradeBandMax = if ($ValidationSelectionMode -eq 'PositiveTradeBand') { $TradeBandMax } else { '' }
+    HardGateMinProfit = if ($ValidationSelectionMode -eq 'PositiveLowestTradesHardGates') { $HardGateMinProfit } else { '' }
+    HardGateMinProfitFactor = if ($ValidationSelectionMode -eq 'PositiveLowestTradesHardGates') { $HardGateMinProfitFactor } else { '' }
+    HardGateMaxDDPct = if ($ValidationSelectionMode -eq 'PositiveLowestTradesHardGates') { $HardGateMaxDDPct } else { '' }
+    HardGateMinTrades = if ($ValidationSelectionMode -eq 'PositiveLowestTradesHardGates') { $HardGateMinTrades } else { '' }
+    QualityFloorMinProfit = if ($ValidationSelectionMode -eq 'PositiveLowestTradesQualityFloor') { $QualityFloorMinProfit } else { '' }
+    QualityFloorMinRatio = if ($ValidationSelectionMode -eq 'PositiveLowestTradesQualityFloor') { $QualityFloorMinRatio } else { '' }
+    QualityFloorMinProfitFactor = if ($ValidationSelectionMode -eq 'PositiveLowestTradesQualityFloor') { $QualityFloorMinProfitFactor } else { '' }
+    FinalMonthMinProfit = if ($ValidationSelectionMode -eq 'PositiveLowestTradesFinalMonth') { $FinalMonthMinProfit } else { '' }
+    SelectionStatus = if ($SelectionStatus -ne '') { $SelectionStatus } elseif ($null -ne $Selected) { 'SelectedOne' } else { 'NoValidationRows' }
     ManifoldId = if ($null -ne $Selected) { $Selected.ManifoldId } else { '' }
     Pass = if ($null -ne $Selected) { $Selected.Pass } else { '' }
     ValidationScore = if ($null -ne $Selected) { $Selected.ValidationScore } else { '' }
@@ -717,6 +837,11 @@ function Export-WindowSelection {
     ValidationTrades = if ($null -ne $Selected) { $Selected.Trades } else { '' }
     ValidationProfitFactor = if ($null -ne $Selected) { $Selected.ProfitFactor } else { '' }
     ValidationWinRatePct = if ($null -ne $Selected) { $Selected.WinRatePct } else { '' }
+    FinalMonthValidationProfit = if ($null -ne $Selected -and $Selected.PSObject.Properties['FinalMonthValidationProfit']) { $Selected.FinalMonthValidationProfit } else { '' }
+    FinalMonthValidationDDPct = if ($null -ne $Selected -and $Selected.PSObject.Properties['FinalMonthValidationDDPct']) { $Selected.FinalMonthValidationDDPct } else { '' }
+    FinalMonthValidationRatio = if ($null -ne $Selected -and $Selected.PSObject.Properties['FinalMonthValidationRatio']) { $Selected.FinalMonthValidationRatio } else { '' }
+    FinalMonthValidationTrades = if ($null -ne $Selected -and $Selected.PSObject.Properties['FinalMonthValidationTrades']) { $Selected.FinalMonthValidationTrades } else { '' }
+    FinalMonthValidationProfitFactor = if ($null -ne $Selected -and $Selected.PSObject.Properties['FinalMonthValidationProfitFactor']) { $Selected.FinalMonthValidationProfitFactor } else { '' }
     ATR = if ($null -ne $Selected) { $Selected.ATR } else { '' }
     ATRMult = if ($null -ne $Selected) { $Selected.ATRMult } else { '' }
     ContiguousCandles = if ($null -ne $Selected) { $Selected.ContiguousCandles } else { '' }
@@ -741,7 +866,18 @@ $reportSubdir = "reports\$ExperimentId"
 $windowsPath = Join-Path $experimentDir 'windows.csv'
 $selectionSummaryPath = Join-Path $experimentDir 'selection_summary.csv'
 $oosSummaryPath = Join-Path $experimentDir 'oos_summary.csv'
-$safeSelectionMode = Get-SafeId $ValidationSelectionMode
+$selectionModeArtifactId = if ($ValidationSelectionMode -eq 'PositiveTradeBand') {
+  "${ValidationSelectionMode}_${TradeBandMin}_${TradeBandMax}"
+} elseif ($ValidationSelectionMode -eq 'PositiveLowestTradesHardGates') {
+  "${ValidationSelectionMode}_PF${HardGateMinProfitFactor}_DD${HardGateMaxDDPct}_T${HardGateMinTrades}"
+} elseif ($ValidationSelectionMode -eq 'PositiveLowestTradesQualityFloor') {
+  "${ValidationSelectionMode}_R${QualityFloorMinRatio}_PF${QualityFloorMinProfitFactor}"
+} elseif ($ValidationSelectionMode -eq 'PositiveLowestTradesFinalMonth') {
+  "${ValidationSelectionMode}_P${FinalMonthMinProfit}"
+} else {
+  $ValidationSelectionMode
+}
+$safeSelectionMode = Get-SafeId $selectionModeArtifactId
 $selectionSummaryForModePath = Join-Path $experimentDir "selection_summary_$safeSelectionMode.csv"
 $oosSummaryForModePath = Join-Path $experimentDir "oos_summary_$safeSelectionMode.csv"
 $fixedProgressPath = Join-Path $experimentDir 'fixed_test_progress.csv'
@@ -758,6 +894,9 @@ if (-not (Test-Path -LiteralPath $TerminalPath) -and -not $PrepareOnly) { throw 
 if ($ISMonths -le 0 -or $ValidationMonths -le 0 -or $OosMonths -le 0 -or $PrimaryOosMonths -le 0 -or $StepMonths -le 0) { throw 'Window lengths must be positive.' }
 if ($PrimaryOosMonths -gt $OosMonths) { throw 'PrimaryOosMonths cannot be greater than OosMonths.' }
 if ($TopOptimizerCandidates -le 0) { throw 'TopOptimizerCandidates must be positive.' }
+if ($TradeBandMin -lt 0 -or $TradeBandMax -lt $TradeBandMin) { throw 'TradeBandMin and TradeBandMax must define a valid non-negative range.' }
+if ($HardGateMinProfitFactor -lt 0.0 -or $HardGateMaxDDPct -lt 0.0 -or $HardGateMinTrades -lt 0) { throw 'Hard gate thresholds must be non-negative.' }
+if ($QualityFloorMinRatio -lt 0.0 -or $QualityFloorMinProfitFactor -lt 0.0) { throw 'Quality floor thresholds must be non-negative.' }
 
 $windows = @(New-Windows)
 $windows | Export-Csv -LiteralPath $windowsPath -NoTypeInformation -Encoding ASCII
@@ -767,7 +906,19 @@ Write-Host "Directory: $experimentDir"
 Write-Host "Symbol: $Symbol $Period"
 Write-Host "Hyperparameters: IS=$ISMonths months, VAL=$ValidationMonths months, OOS=$OosMonths months, primary OOS=$PrimaryOosMonths months, step=$StepMonths month(s)"
 Write-Host "Windows: $($windows.Count) ($($windows[0].OosStart) -> $($windows[-1].OosStart))"
-Write-Host "Validation rule: rank every completed VAL report by $ValidationSelectionMode and select exactly one candidate per window. No VAL pass/fail filter is applied."
+if ($ValidationSelectionMode -eq 'PositiveLowestTradesHardGates') {
+  Write-Host "Validation rule: select lowest-trade candidate passing hard gates, otherwise record no selection."
+  Write-Host "Hard gates: profit > $HardGateMinProfit, PF >= $HardGateMinProfitFactor, DD <= $HardGateMaxDDPct%, trades >= $HardGateMinTrades"
+} elseif ($ValidationSelectionMode -eq 'PositiveLowestTradesQualityFloor') {
+  Write-Host "Validation rule: select lowest-trade candidate passing quality floor, otherwise record no selection."
+  Write-Host "Quality floor: profit > $QualityFloorMinProfit, ratio >= $QualityFloorMinRatio, PF >= $QualityFloorMinProfitFactor"
+} elseif ($ValidationSelectionMode -eq 'PositiveLowestTradesFinalMonth') {
+  Write-Host "Validation rule: require positive 3-month validation and positive final validation month, then select lowest-trade candidate."
+  Write-Host "Final-month gate: profit > $FinalMonthMinProfit"
+} else {
+  Write-Host "Validation rule: rank every completed VAL report by $ValidationSelectionMode and select exactly one candidate per window. No VAL pass/fail filter is applied."
+}
+if ($ValidationSelectionMode -eq 'PositiveTradeBand') { Write-Host "Trade band: $TradeBandMin -> $TradeBandMax validation trades" }
 
 if ($PrepareOnly) {
   $firstRunnable = @($windows | Where-Object { [int]$_.WindowIndex -ge $StartAtWindow } | Select-Object -First 1)
@@ -827,8 +978,8 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
 
   if ($validationCandidates.Count -eq 0) {
     Write-Host "No optimizer candidates found for $($window.WindowId). Skipping VAL/OOS for this window."
-    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir 'selected_candidate.csv')
-    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir "selected_candidate_$safeSelectionMode.csv")
+    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir 'selected_candidate.csv') -SelectionStatus 'NoOptimizerCandidates'
+    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir "selected_candidate_$safeSelectionMode.csv") -SelectionStatus 'NoOptimizerCandidates'
     $windowsProcessedThisSession++
     continue
   }
@@ -837,6 +988,7 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
   $validationManifestPath = Join-Path $windowDir 'validation_manifest.csv'
   $validationResultsPath = Join-Path $windowDir 'validation_results_ranked.csv'
   $validationResultsForModePath = Join-Path $windowDir "validation_results_ranked_$safeSelectionMode.csv"
+  $finalMonthValidationResultsForModePath = Join-Path $windowDir "validation_final_month_results_$safeSelectionMode.csv"
   $validationManifest | Export-Csv -LiteralPath $validationManifestPath -NoTypeInformation -Encoding ASCII
 
   if ($MaxFixedTests -gt 0 -and $fixedTestsRunThisSession -ge $MaxFixedTests) {
@@ -852,11 +1004,38 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
   }
 
   $validationRows = @(Read-ManifestReportRows -Manifest $validationManifest -ReportRoot $reportRoot)
-  $selected = Select-OneValidationCandidate -ValidationRows $validationRows
+  $finalMonthRows = @()
+  if ($ValidationSelectionMode -eq 'PositiveLowestTradesFinalMonth') {
+    $positiveValidationRows = @($validationRows | Where-Object { [double]$_.Profit -gt 0.0 })
+    if ($positiveValidationRows.Count -gt 0) {
+      $finalMonthManifest = @(New-FinalMonthValidationManifest -Window $window -Candidates $positiveValidationRows -ReportSubdir $reportSubdir)
+      $finalMonthManifestPath = Join-Path $windowDir "validation_final_month_manifest_$safeSelectionMode.csv"
+      $finalMonthManifest | Export-Csv -LiteralPath $finalMonthManifestPath -NoTypeInformation -Encoding ASCII
+
+      if ($MaxFixedTests -gt 0 -and $fixedTestsRunThisSession -ge $MaxFixedTests) {
+        Write-Host "Fixed-test session limit reached before final-month VAL stage completed for $($window.WindowId). Rerun the same command to resume."
+        return
+      }
+      $remainingFixed = if ($MaxFixedTests -gt 0) { $MaxFixedTests - $fixedTestsRunThisSession } else { -1 }
+      $fixedTestsRunThisSession += Invoke-TestManifest -Manifest $finalMonthManifest -ProgressPath $fixedProgressPath -ReportRoot $reportRoot -TemplateSetPath $templateSetPath -TempSetPath $tempSetPath -RemainingFixedTests $remainingFixed
+      $finalMonthMissing = @($finalMonthManifest | Where-Object { -not (Test-Path -LiteralPath (Convert-ReportPathToFullPath -ReportRoot $reportRoot -ExpectedReport $_.ExpectedReport)) })
+      if ($finalMonthMissing.Count -gt 0) {
+        Write-Host "Final-month VAL stage incomplete for $($window.WindowId). Missing reports: $($finalMonthMissing.Count). Rerun the same command to resume."
+        return
+      }
+
+      $finalMonthRows = @(Read-ManifestReportRows -Manifest $finalMonthManifest -ReportRoot $reportRoot)
+      $finalMonthRows | Export-Csv -LiteralPath $finalMonthValidationResultsForModePath -NoTypeInformation -Encoding ASCII
+    } else {
+      Write-Host "No positive 3-month validation rows for $($window.WindowId); final-month confirmation cannot select a candidate."
+    }
+  }
+
+  $selected = Select-OneValidationCandidate -ValidationRows $validationRows -FinalMonthRows $finalMonthRows
   if ($null -eq $selected) {
-    Write-Host "No validation rows could be read for $($window.WindowId). OOS skipped."
-    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir 'selected_candidate.csv')
-    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir "selected_candidate_$safeSelectionMode.csv")
+    Write-Host "No validation candidate selected for $($window.WindowId): $script:LastValidationSelectionStatus. OOS skipped."
+    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir 'selected_candidate.csv') -SelectionStatus $script:LastValidationSelectionStatus
+    Export-WindowSelection -Window $window -Selected $null -Path (Join-Path $windowDir "selected_candidate_$safeSelectionMode.csv") -SelectionStatus $script:LastValidationSelectionStatus
     $windowsProcessedThisSession++
     continue
   }

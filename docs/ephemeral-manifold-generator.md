@@ -218,17 +218,21 @@ Default process version:
 Validation selection rule:
 
 - The optimizer candidates are ranked by IS score and the top `25` are run through validation by default.
-- Validation does not apply a pass/fail filter that can select nothing.
-- Every completed validation report is ranked by the selected deterministic validation mode. The default is `Score`; supported modes are `Score`, `Profit`, `Trades`, `LowestTrades`, `PositiveLowestTrades`, `PositiveLowestTradesThenDD`, `PositiveBestRatio`, `LowestDD`, and `HighestDD`.
-- Exactly one candidate is selected for OOS whenever validation reports exist for the window.
-- If all validation candidates lose money, the least-bad ranked candidate is still selected. This preserves the research rule that the generator must make one deployment decision per window.
+- Validation usually does not apply a pass/fail filter that can select nothing, except for explicitly named abstention modes such as `PositiveLowestTradesHardGates`, `PositiveLowestTradesQualityFloor`, and `PositiveLowestTradesFinalMonth`.
+- Every completed validation report is ranked by the selected deterministic validation mode. The default is `Score`; supported modes are `Score`, `Profit`, `Trades`, `LowestTrades`, `PositiveLowestTrades`, `PositiveLowestTradesThenDD`, `PositiveLowestTradesHardGates`, `PositiveLowestTradesQualityFloor`, `PositiveLowestTradesFinalMonth`, `PositiveBestRatio`, `PositiveHighestPF`, `PositiveTradeBand`, `LowestDD`, and `HighestDD`.
+- Exactly one candidate is selected for OOS whenever validation reports exist for the window, except abstention modes can record no selection when their fixed gates are not met.
+- If all validation candidates lose money, most modes still select the least-bad ranked candidate. This preserves the research rule that the generator must make one deployment decision per window unless the process version explicitly defines abstention gates.
 
 Current reselection finding from the first six EURUSD windows:
 
 - `PositiveLowestTrades` is the current lead mode.
 - It requires profitable validation candidates, then selects the lowest validation trade count with deterministic tie-breakers.
 - First six OOS windows produced net `+9,214.41`, `3 / 6` profitable windows, worst DD `22.65%`, and `465` trades.
-- The process is still not robust enough to promote because OOS starts `2020.10.01`, `2020.11.01`, and `2020.12.01` were all negative.
+- `PositiveLowestTradesFinalMonth` requires positive 3-month validation and positive final validation month, then selects the lowest validation trade count. It produced net `+7,881.33`, `3 / 6` profitable windows, worst DD `25.62%`, and `493` trades, so it is close but not better than the current lead.
+- `PositiveLowestTradesHardGates` with validation profit `> 0`, PF `>= 1.10`, DD `<= 15%`, and trades `>= 40` produced net `+1,223.10`, `2 / 6` profitable windows, worst DD `22.65%`, and `474` trades, so it is not better than the current lead.
+- `PositiveLowestTradesQualityFloor` with validation profit `> 0`, ratio `>= 0.50`, and PF `>= 1.10` produced net `-6,558.80`, `2 / 6` profitable windows, worst DD `25.62%`, and `491` trades, so it is worse than the current lead.
+- The process is still not robust enough to promote because OOS starts `2020.10.01`, `2020.11.01`, and `2020.12.01` were all negative across the main tested modes. The shared failure pattern suggests the next tests should be process-level hypotheses rather than more simple validation ranking variants.
+- Recommended next tests: compare 1-month versus 3-month OOS deployment on the same selected candidates; test an explicit abstention/regime filter; vary validation/deployment window structure; complete and test the missing daily trend filter/final signal logic; or repeat the generator on another symbol to check whether the pattern is EURUSD-specific.
 
 Default run command:
 
@@ -242,8 +246,8 @@ Restart behavior:
 - Existing optimizer XML files are skipped.
 - Existing validation and OOS fixed-test reports are skipped.
 - Generated optimizer and validation reports are kept for later reselection experiments.
-- To reuse completed IS/VAL work but choose OOS manifolds differently, rerun with `-ValidationSelectionMode Profit`, `-ValidationSelectionMode Trades`, `-ValidationSelectionMode LowestTrades`, `-ValidationSelectionMode PositiveLowestTrades`, `-ValidationSelectionMode PositiveLowestTradesThenDD`, `-ValidationSelectionMode PositiveBestRatio`, `-ValidationSelectionMode LowestDD`, or `-ValidationSelectionMode HighestDD`.
-- Mode-specific CSV artifacts are written, such as `selected_candidate_Trades.csv`, `validation_results_ranked_Trades.csv`, and `oos_results_Trades.csv`, so alternate selection runs can be compared later.
+- To reuse completed IS/VAL work but choose OOS manifolds differently, rerun with `-ValidationSelectionMode Profit`, `-ValidationSelectionMode Trades`, `-ValidationSelectionMode LowestTrades`, `-ValidationSelectionMode PositiveLowestTrades`, `-ValidationSelectionMode PositiveLowestTradesThenDD`, `-ValidationSelectionMode PositiveLowestTradesHardGates`, `-ValidationSelectionMode PositiveLowestTradesQualityFloor`, `-ValidationSelectionMode PositiveLowestTradesFinalMonth`, `-ValidationSelectionMode PositiveBestRatio`, `-ValidationSelectionMode PositiveHighestPF`, `-ValidationSelectionMode PositiveTradeBand`, `-ValidationSelectionMode LowestDD`, or `-ValidationSelectionMode HighestDD`.
+- Mode-specific CSV artifacts are written, such as `selected_candidate_Trades.csv`, `validation_results_ranked_Trades.csv`, and `oos_results_Trades.csv`, so alternate selection runs can be compared later. `PositiveTradeBand` artifacts include the band, for example `oos_summary_PositiveTradeBand_60_120.csv`. `PositiveLowestTradesHardGates` artifacts include the gate suffix, for example `oos_summary_PositiveLowestTradesHardGates_PF1_1_DD15_T40.csv`. `PositiveLowestTradesQualityFloor` artifacts include the floor suffix, for example `oos_summary_PositiveLowestTradesQualityFloor_R0_5_PF1_1.csv`. `PositiveLowestTradesFinalMonth` artifacts include the final-month threshold, for example `oos_summary_PositiveLowestTradesFinalMonth_P0.csv`.
 - If the run is stopped during an optimizer, that monthly optimizer is rerun because no complete optimizer XML exists.
 - If the run is stopped during a fixed test, only the missing report is rerun.
 - Unprofitable OOS results are recorded and the runner continues to later windows. OOS profitability is not a stop condition.

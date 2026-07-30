@@ -180,8 +180,8 @@ Restart behavior:
 
 - Rerun the same command to resume.
 - Completed optimizer XML files and fixed-test `.xml.htm` reports are skipped.
-- Validation ranking selects exactly one OOS candidate per completed window; it does not use a validation pass/fail filter that can select nothing.
-- `-ValidationSelectionMode` can be `Score`, `Profit`, `Trades`, `LowestTrades`, `PositiveLowestTrades`, `PositiveLowestTradesThenDD`, `PositiveBestRatio`, `LowestDD`, or `HighestDD`. Rerunning with a different mode reuses completed optimizer and validation reports, then writes mode-specific selection/OOS CSV artifacts.
+- Validation ranking selects exactly one OOS candidate per completed window for most modes. Abstention modes such as `PositiveLowestTradesHardGates`, `PositiveLowestTradesQualityFloor`, and `PositiveLowestTradesFinalMonth` can record no selection and skip OOS when no validation candidate passes the fixed gates.
+- `-ValidationSelectionMode` can be `Score`, `Profit`, `Trades`, `LowestTrades`, `PositiveLowestTrades`, `PositiveLowestTradesThenDD`, `PositiveLowestTradesHardGates`, `PositiveLowestTradesQualityFloor`, `PositiveLowestTradesFinalMonth`, `PositiveBestRatio`, `PositiveHighestPF`, `PositiveTradeBand`, `LowestDD`, or `HighestDD`. Rerunning with a different mode reuses completed optimizer and validation reports, then writes mode-specific selection/OOS CSV artifacts. `PositiveTradeBand` artifacts include the band, such as `PositiveTradeBand_60_120`; `PositiveLowestTradesHardGates` artifacts include the gate suffix, such as `PositiveLowestTradesHardGates_PF1_1_DD15_T40`; `PositiveLowestTradesQualityFloor` artifacts include the floor suffix, such as `PositiveLowestTradesQualityFloor_R0_5_PF1_1`; `PositiveLowestTradesFinalMonth` artifacts include the final-month threshold, such as `PositiveLowestTradesFinalMonth_P0`.
 - Unprofitable OOS reports are recorded and do not stop the runner.
 
 Useful options:
@@ -193,7 +193,12 @@ Useful options:
 - `-ValidationSelectionMode LowestTrades` selects the validation candidate with the lowest trade count, using deterministic tie-breakers.
 - `-ValidationSelectionMode PositiveLowestTrades` selects the lowest-trade profitable validation candidate, falling back to lowest trades if none are profitable.
 - `-ValidationSelectionMode PositiveLowestTradesThenDD` selects the lowest-trade profitable validation candidate, then uses lowest DD as the first tie-breaker.
+- `-ValidationSelectionMode PositiveLowestTradesHardGates` selects the lowest-trade validation candidate passing profit `> 0`, PF `>= 1.10`, DD `<= 15%`, and trades `>= 40` by default. Override with `-HardGateMinProfit`, `-HardGateMinProfitFactor`, `-HardGateMaxDDPct`, and `-HardGateMinTrades`. If no candidate passes, it records `NoCandidatesPassedHardGates` and skips OOS for that window.
+- `-ValidationSelectionMode PositiveLowestTradesQualityFloor` selects the lowest-trade validation candidate passing profit `> 0`, ratio `>= 0.50`, and PF `>= 1.10` by default. Override with `-QualityFloorMinProfit`, `-QualityFloorMinRatio`, and `-QualityFloorMinProfitFactor`. If no candidate passes, it records `NoCandidatesPassedQualityFloor` and skips OOS for that window.
+- `-ValidationSelectionMode PositiveLowestTradesFinalMonth` runs final-month validation tests for candidates with positive 3-month validation, then selects the lowest-trade candidate whose final validation month is also profitable. Override with `-FinalMonthMinProfit`. If no candidate passes, it records `NoCandidatesPassedFinalMonthConfirmation` and skips OOS for that window.
 - `-ValidationSelectionMode PositiveBestRatio` selects the profitable validation candidate with the highest profit-to-DD ratio.
+- `-ValidationSelectionMode PositiveHighestPF` selects the profitable validation candidate with the highest profit factor.
+- `-ValidationSelectionMode PositiveTradeBand -TradeBandMin 60 -TradeBandMax 120` selects profitable validation candidates inside the trade-count band, then ranks by validation score. If no band candidate exists, it falls back to profitable candidates, then all candidates.
 - `-PrepareOnly` writes the windows file and current optimizer config without launching MT5.
 
 Outputs are written under the terminal data folder in `reports\tdts_eg_eurusd_2017_is36m_val3m_oos3m_step1m` by default.
@@ -205,6 +210,12 @@ powershell -ExecutionPolicy Bypass -File .\Files\ThreeDayTrendSignal\Run-TDTS-EU
 ```
 
 This mode is positive across the first six OOS windows but still has three losing late windows, so treat it as a lead diagnostic mode, not a promoted process.
+
+`PositiveLowestTradesHardGates` with default gates was also tested across the first six windows and produced net OOS `+1,223.10`, `2 / 6` profitable windows, worst DD `22.65%`, and `474` trades. It is positive but weaker than `PositiveLowestTrades`.
+
+`PositiveLowestTradesQualityFloor` with default floors was also tested across the first six windows and produced net OOS `-6,558.80`, `2 / 6` profitable windows, worst DD `25.62%`, and `491` trades. It is worse than `PositiveLowestTrades`.
+
+`PositiveLowestTradesFinalMonth` with default final-month profit confirmation was also tested across the first six windows and produced net OOS `+7,881.33`, `3 / 6` profitable windows, worst DD `25.62%`, and `493` trades. It is close but weaker than `PositiveLowestTrades`.
 
 ## Legacy Rolling Manifold Cycle Runner
 
