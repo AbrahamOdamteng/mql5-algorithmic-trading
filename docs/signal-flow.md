@@ -40,6 +40,30 @@ Not implemented yet:
 - Final long/short signal triangles.
 - Final-signal order placement.
 
+## Experimental EMA-Filtered Variant Flow
+
+The experimental A/B EA is `Experts/ATRMomentumRelVolEMAFilter/ATRMomentumRelVolEMAFilterEA.mq5`.
+
+Current implemented flow:
+
+1. Create ATR, fast EMA, and slow EMA handles on initialization.
+2. Optionally delete prior objects with the `MRV_EMA_` prefix.
+3. Scan recent historical bars and draw ATR momentum markers, relative-volume markers, and EMA line segments.
+4. Draw slow EMA in blue.
+5. Draw fast EMA in red.
+6. On each new chart bar, evaluate the latest closed bar.
+7. Draw the same marker types as the current TDTS baseline: blue/red circles, orange diamonds, aqua/purple squares.
+8. If trading is enabled and a new square condition exists, evaluate the EMA/price gate.
+9. Require EMA separation count to be at least `g_MinEMASeparationCandles`.
+10. For long, require current ask and fast EMA above slow EMA.
+11. For short, require current bid and fast EMA below slow EMA.
+12. Use slow EMA from the closed signal candle as stop loss.
+13. Skip trades when slow-EMA stop distance is invalid, below broker stop requirements, or greater than `ATR * g_MaxStopLossATRMultiple`.
+14. Set take profit from stop distance times `g_TakeProfitSLMultiple`.
+15. Calculate volume from fixed starting-balance risk using `g_StartingBalance` and `g_RiskPercentOfBalance`.
+
+Square color does not determine direction in this variant. Any square can become a long or short candidate depending only on the EMA/price gate at order placement.
+
 The older WeekHighLow signal flow below is legacy reference only.
 
 ## Legacy WeekHighLow EA Flow

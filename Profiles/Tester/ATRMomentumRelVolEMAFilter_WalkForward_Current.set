@@ -1,0 +1,23 @@
+; saved on 2026.07.31
+; this file contains input parameters for testing/optimizing ATRMomentumRelVolEMAFilterEA expert advisor
+; to use it in the strategy tester, click Load in the context menu of the Inputs tab
+;
+g_ATR_Period=14||10||5||500||Y
+g_MomentumATRMultiplier=5.0||1.0||0.25||10.0||Y
+g_ContiguousCandles=2||1||1||10||Y
+g_RelVolLength=20||5||5||90||Y
+g_RelVolSignalCandles=1||1||1||10||Y
+g_RelVolThreshold=1.5||1.0||0.5||10.0||Y
+g_FastEMALength=100||25||25||1975||Y
+g_SlowEMALength=400||50||25||2000||Y
+g_MinEMASeparationCandles=0||0||3||72||Y
+g_RiskPercentOfBalance=1.0||0.1||0.1||1.0||Y
+g_TakeProfitSLMultiple=2.0||1.0||0.25||5.0||Y
+g_MaxStopLossATRMultiple=3.0||1.0||0.5||10.0||Y
+g_HistoryBarsToScan=2000||2000||1||2000||N
+g_MarkerSize=1||1||1||5||N
+g_DeleteObjectsOnInit=true||false||0||true||N
+g_EnableTrading=true||false||0||true||N
+g_StartingBalance=100000.0||100000.0||1000.0||100000.0||N
+g_MagicNumber=3001002||3001002||1||3001002||N
+g_DeviationPoints=20||20||1||20||N

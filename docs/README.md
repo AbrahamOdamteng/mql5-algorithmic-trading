@@ -23,6 +23,14 @@ Current implementation state:
 - Optional market order placement is implemented only for newly drawn ATR momentum plus relative-volume square markers for genetic testing.
 - Trade sizing uses fixed starting-balance risk, defaulting to `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0`, rather than fixed lots.
 
+Experimental variant state:
+
+- `Experts/ATRMomentumRelVolEMAFilter/ATRMomentumRelVolEMAFilterEA.mq5` is a separate A/B test EA created on `2026-07-31`.
+- It preserves ATR momentum plus relative-volume square detection, adds fast/slow EMA chart lines and trade gating, uses slow EMA as stop loss, and compiled with `0 errors, 0 warnings`.
+- `Profiles/Tester/ATRMomentumRelVolEMAFilter_WalkForward_Current.set` is the matching optimizer preset.
+- If this EA is used for generator research, keep the same throwaway-manifold structure: `36` months optimization, `3` months validation, `3` months OOS, then roll the full window forward by `1` month and repeat.
+- `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-EphemeralGenerator.ps1` is the separate restartable runner for the EMA-filtered EA. The prepared 2025 smoke run uses OOS starts `2025.01.01`, `2025.02.01`, and `2025.03.01`.
+
 See `three-day-trend-signal.md` for the active strategy details.
 
 The active research direction is now the Ephemeral Manifold Generator. The goal is no longer to find a forever manifold. The goal is to build and empirically optimize a repeatable per-symbol pipeline that discovers short-lived manifolds. Baseline hyperparameters are rolling `36`-month IS, `3`-month validation, deterministic selection of exactly one frozen manifold, and a single `3`-month OOS measurement. Alpha-decay slices are disabled for the current run. These are generator hyperparameters to test, not settled optimal values. See `ephemeral-manifold-generator.md`.
@@ -32,6 +40,7 @@ Latest EURUSD generator finding: for the first six windows of `tdts_eg_eurusd_20
 ## Primary Files
 
 - `Experts/ThreeDayTrendSignal/ThreeDayTrendSignalEA.mq5`: Active EA for the new strategy. It currently draws ATR momentum and relative-volume markers, and can place risk-sized market orders from newly drawn ATR momentum plus relative-volume square markers.
+- `Experts/ATRMomentumRelVolEMAFilter/ATRMomentumRelVolEMAFilterEA.mq5`: Experimental EMA-filtered A/B variant. It draws slow EMA in blue and fast EMA in red, gates square-marker trades by EMA/price direction and minimum EMA separation, uses slow EMA as stop loss, and keeps fixed starting-balance risk sizing.
 - `docs/three-day-trend-signal.md`: Active strategy notes and implementation sequence.
 
 Legacy WeekHighLow files, retained for reference unless explicitly revisited:

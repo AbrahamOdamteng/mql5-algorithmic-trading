@@ -91,6 +91,77 @@ Trade execution for genetic testing:
 - `g_TakeProfitSLMultiple` sets take-profit distance as a multiple of the stop-loss distance.
 - Historical markers drawn during `OnInit()` do not place trades.
 
+## Experimental EMA-Filtered Variant
+
+A separate revised EA has been created for A/B testing without changing the current TDTS baseline:
+
+```text
+Experts/ATRMomentumRelVolEMAFilter/ATRMomentumRelVolEMAFilterEA.mq5
+```
+
+Current status:
+
+- Compiled with MetaEditor64 on `2026-07-31` with `0 errors, 0 warnings`.
+- Uses object prefix `MRV_EMA_` and magic number default `3001002`.
+- Preserves the existing momentum-only circles, relative-volume-only diamonds, and momentum plus relative-volume squares.
+- Draws the slow EMA as a blue chart line.
+- Draws the fast EMA as a red chart line.
+- Trades only newly closed-bar square conditions when the EMA/price gate passes.
+- Square color does not determine trade direction.
+- Long direction requires current ask above the fast EMA, and the fast EMA above the slow EMA.
+- Short direction requires current bid below the fast EMA, and the fast EMA below the slow EMA.
+- EMA separation must be at least `g_MinEMASeparationCandles`, counted on closed candles and including the signal candle.
+- Stop loss is the slow EMA value from the closed signal candle.
+- Take profit is `g_TakeProfitSLMultiple` times the slow-EMA stop distance.
+- Trades are skipped when slow-EMA stop distance exceeds `ATR * g_MaxStopLossATRMultiple`.
+- Risk sizing still uses fixed starting balance via `g_StartingBalance * g_RiskPercentOfBalance / 100.0`.
+- Historical markers and EMA visuals drawn during `OnInit()` do not place trades.
+
+Prepared preset:
+
+```text
+Profiles/Tester/ATRMomentumRelVolEMAFilter_WalkForward_Current.set
+```
+
+Prepared tester config:
+
+```text
+Files/ATRMomentumRelVolEMAFilter/MRV_EMA_EURUSD_Genetic_20260731.ini
+```
+
+Prepared throwaway-manifold runner:
+
+```text
+Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-EphemeralGenerator.ps1
+```
+
+The preset enables optimization for the revised strategy inputs and leaves operational inputs fixed. The existing TDTS EA, presets, and generator runner remain unchanged.
+
+If this revised EA is used in the generator workflow, it should keep the throwaway-manifold process:
+
+- Optimize for `36` months.
+- Validate for `3` months.
+- Run OOS for `3` months.
+- Move the entire window forward by `1` month and repeat.
+- Treat selected EMA-filtered manifolds as disposable outputs of the generator, not permanent parameter sets.
+
+Prepared 2025 three-iteration command:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-MRV-EURUSD-EphemeralGenerator.ps1 `
+  -FirstOosStart 2025-01-01 `
+  -LastOosStart 2025-03-01 `
+  -ISMonths 36 `
+  -ValidationMonths 3 `
+  -OosMonths 3 `
+  -PrimaryOosMonths 3 `
+  -StepMonths 1 `
+  -MaxWindows 3 `
+  -ValidationSelectionMode PositiveLowestTrades
+```
+
+This produces OOS starts `2025.01.01`, `2025.02.01`, and `2025.03.01`. With `-OosMonths 3`, the first OOS window ends at `2025.04.01`; an end date of `2025.03.01` would be a `2`-month OOS slice and should only be used if the process is intentionally changed.
+
 ## Marker Mapping
 
 Implemented now:
@@ -133,6 +204,9 @@ Future changes should continue compiling cleanly before being considered complet
 
 - `Files/ThreeDayTrendSignal/TDTS_EURUSD_Genetic_20260718.ini`: prepared EURUSD H1 genetic optimization config for `2000.01.01 -> 2018.01.01` with forward mode enabled. Do not run automatically from assistant sessions unless explicitly requested.
 - `Profiles/Tester/ThreeDayTrendSignal_EURUSD_Genetic_20260718.set`: matching optimizer input preset for ATR period, ATR momentum multiplier, contiguous candle count, relative-volume length/candles/threshold, stop-loss ATR multiple, and take-profit SL multiple. Current lot sizing uses fixed starting-balance risk with `g_StartingBalance=100000.0` and `g_RiskPercentOfBalance=1.0`.
+- `Files/ATRMomentumRelVolEMAFilter/MRV_EMA_EURUSD_Genetic_20260731.ini`: prepared EURUSD H1 genetic optimization config for the experimental EMA-filtered variant using `2000.01.01 -> 2018.01.01` and forward mode enabled. Do not run automatically from assistant sessions unless explicitly requested.
+- `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-EphemeralGenerator.ps1`: restartable EURUSD throwaway-manifold runner for the experimental EMA-filtered variant. Defaults are `36m` IS, `3m` validation, `3m` OOS, `3m` primary OOS horizon, and `1m` rolling step. The prepared 2025 run uses OOS starts `2025.01.01 -> 2025.03.01` for three iterations.
+- `Profiles/Tester/ATRMomentumRelVolEMAFilter_WalkForward_Current.set`: optimizer preset for the experimental EMA-filtered variant. It optimizes ATR period, momentum ATR multiplier, contiguous candles, relative-volume length/signal candles/threshold, fast and slow EMA lengths, minimum EMA separation candles, fixed starting-balance risk percent, take-profit multiple, and max stop-loss ATR multiple.
 - `Files/ThreeDayTrendSignal/Run-TDTS-WalkForwardRestartable.ps1`: restartable TDTS rolling-cycle runner from the older EURUSD-discovery plus cross-symbol-promotion workflow. Treat it as legacy scaffolding unless it is revised for the new per-symbol ephemeral-generator process.
 - `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1`: active restartable EURUSD baseline generator runner. Defaults are `36m` IS, `3m` validation, `3m` OOS, `3m` primary OOS horizon, and `1m` rolling step. Most validation ranking modes promote exactly one OOS candidate when validation reports exist; explicit abstention modes such as `PositiveLowestTradesHardGates` can record no selection.
 - `Files/ThreeDayTrendSignal/tdts_ephemeral_optimizer_current.ini`: current generated optimizer config for the active EURUSD generator runner.

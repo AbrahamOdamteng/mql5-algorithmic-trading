@@ -31,6 +31,25 @@ sum(current-bar tick volume / average same-intraday-slot tick volume over g_RelV
 
 The genetic optimizer currently enables `g_RelVolLength`, `g_RelVolCandles`, and `g_RelVolThreshold`; fixed validation and OOS tests carry those optimized values forward.
 
+## Experimental EMA-Filtered EA
+
+`Experts/ATRMomentumRelVolEMAFilter/ATRMomentumRelVolEMAFilterEA.mq5` is a separate experimental A/B variant, not a replacement for the active TDTS baseline yet.
+
+It currently:
+
+- Creates ATR, fast EMA, and slow EMA handles on the chart timeframe.
+- Draws historical and latest closed-bar ATR momentum and relative-volume markers using object prefix `MRV_EMA_`.
+- Draws slow EMA chart segments in blue and fast EMA chart segments in red.
+- Preserves the existing marker mapping for momentum circles, relative-volume diamonds, and momentum plus relative-volume squares.
+- Counts closed candles since the fast and slow EMAs last crossed or touched using copied EMA buffers, not a persistent global counter.
+- Places trades only from newly closed-bar square conditions when `g_EnableTrading` is true and the EMA/price gate passes.
+- Determines trade direction from current bid/ask and fast EMA position relative to slow EMA, not from square color.
+- Uses the slow EMA value from the closed signal candle as stop loss.
+- Skips trades when the slow-EMA stop distance exceeds `ATR * g_MaxStopLossATRMultiple` or broker stop-distance requirements.
+- Sets take profit from stop distance times `g_TakeProfitSLMultiple`.
+- Calculates lot size from fixed starting-balance risk: `g_StartingBalance * g_RiskPercentOfBalance / 100.0`, divided by one-lot loss at the slow-EMA stop.
+- Does not trade historical markers drawn during initialization.
+
 Legacy WeekHighLow architecture is retained below for reference only.
 
 ## Legacy WeekHighLow EA

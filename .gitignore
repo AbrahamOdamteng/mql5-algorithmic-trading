@@ -12,6 +12,8 @@
 !Experts/WeekHighLow/**
 !Experts/ThreeDayTrendSignal/
 !Experts/ThreeDayTrendSignal/**
+!Experts/ATRMomentumRelVolEMAFilter/
+!Experts/ATRMomentumRelVolEMAFilter/**
 
 
 # Indicators
@@ -28,10 +30,13 @@
 !Files/WeekHighLow/**
 !Files/ThreeDayTrendSignal/
 !Files/ThreeDayTrendSignal/**
+!Files/ATRMomentumRelVolEMAFilter/
+!Files/ATRMomentumRelVolEMAFilter/**
 
 # Tester presets
 !Profiles/Tester/
 !Profiles/Tester/ThreeDayTrendSignal*.set
+!Profiles/Tester/ATRMomentumRelVolEMAFilter*.set
 
 # Documentation
 !docs/
