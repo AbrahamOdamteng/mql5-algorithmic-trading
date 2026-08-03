@@ -1,7 +1,7 @@
 param(
   [string]$TerminalPath = 'C:\Program Files\MetaTrader 5\terminal64.exe',
   [datetime]$FirstOosStart = '2025-01-01',
-  [datetime]$LastOosStart = '2025-03-01',
+  [datetime]$LastOosStart = '2025-04-01',
   [ValidateSet('Score', 'Profit', 'Trades', 'LowestTrades', 'PositiveLowestTrades', 'PositiveLowestTradesThenDD', 'PositiveLowestTradesHardGates', 'PositiveLowestTradesQualityFloor', 'PositiveLowestTradesFinalMonth', 'PositiveBestRatio', 'PositiveHighestPF', 'PositiveTradeBand', 'LowestDD', 'HighestDD')]
   [string]$ValidationSelectionMode = 'PositiveBestRatio',
   [int]$TopOptimizerCandidates = 25,

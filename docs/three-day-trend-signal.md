@@ -108,8 +108,8 @@ Current status:
 - Draws the fast EMA as a red chart line.
 - Trades only newly closed-bar square conditions when the EMA/price gate passes.
 - Square color does not determine trade direction.
-- Long direction requires current ask above the fast EMA, and the fast EMA above the slow EMA.
-- Short direction requires current bid below the fast EMA, and the fast EMA below the slow EMA.
+- Long direction requires current ask and fast EMA above the slow EMA.
+- Short direction requires current bid and fast EMA below the slow EMA.
 - EMA separation must be at least `g_MinEMASeparationCandles`, counted on closed candles and including the signal candle.
 - Stop loss is the slow EMA value from the closed signal candle.
 - Take profit is `g_TakeProfitSLMultiple` times the slow-EMA stop distance.
@@ -137,13 +137,59 @@ Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-EphemeralGenerator.ps1
 
 The preset enables optimization for the revised strategy inputs and leaves operational inputs fixed. The existing TDTS EA, presets, and generator runner remain unchanged.
 
-If this revised EA is used in the generator workflow, it should keep the throwaway-manifold process:
+The original prepared EMA diagnostic used the throwaway-manifold process:
 
 - Optimize for `36` months.
 - Validate for `3` months.
 - Run OOS for `3` months.
 - Move the entire window forward by `1` month and repeat.
 - Treat selected EMA-filtered manifolds as disposable outputs of the generator, not permanent parameter sets.
+
+The completed EMA diagnostic `mrv_ema_eg_eurusd_2025_is24m_val48m_oos1m_step1m` used `24` months IS, `48` months validation, `1` month OOS, and `1` month rolling step. It failed promotion; validation was limited to the top `25` IS candidates, and W0001 selected a candidate with roughly `63%` validation DD.
+
+The completed non-perturbation EMA forward-validation diagnostic was run with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-MRV-EURUSD-ForwardValidationGenerator.ps1
+```
+
+This used MT5 optimizer `ForwardMode=1` for `24` months IS plus `24` months validation, then selected from validation-gated forward candidates and ran `1` month OOS. It did not run grouped perturbation.
+
+Result for `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m`:
+
+- Net OOS: `+7,344.13`.
+- Profitable windows: `2 / 4`.
+- Zero-trade windows: `1 / 4`.
+- OOS trades: `22`.
+- Worst OOS DD: `2.74%`.
+- Selected validation DDs: `10.36%`, `8.35%`, `9.86%`, and `2.90%`.
+
+Interpretation: the MT5-forward-validation process fixed the prior high-validation-DD selection flaw, but this is not promotable yet because the sample is tiny, W0004 produced no OOS trades, and `g_RiskPercentOfBalance` was still optimized.
+
+After forward-validation selection and trade-frequency handling are reviewed, the planned next process is grouped validation-survivor perturbation before OOS selection:
+
+- Run IS optimization and validation normally.
+- Keep successful validation candidates.
+- Group validation survivors by normalized parameter similarity.
+- Select each group's medoid as the real candidate nearest the middle of that group.
+- Perturb only group medoids using fixed single backtests with `Optimization=0`, not MT5 genetic optimization.
+- Require local perturbation robustness before selecting a medoid for OOS.
+- Use OOS only as measurement after the selection process is fixed.
+
+Preferred first grouped-perturbation process version:
+
+- IS: `24` months.
+- Validation: `24` months.
+- OOS measurement: `3` months.
+- Rolling step: `1` month.
+
+Prepared grouped-perturbation runner:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-MRV-EURUSD-ForwardPerturbationGenerator.ps1
+```
+
+This runner uses MT5 built-in forward testing for validation and fixed `Optimization=0` tests for perturbation and OOS.
 
 Prepared 2025 three-iteration command:
 

@@ -621,10 +621,10 @@ int GetTradeDirection(const TDTSSignalContext &context, const MqlTick &tick)
    if(context.slowEMA <= 0.0 || context.fastEMA <= 0.0)
       return 0;
 
-   if(tick.ask > context.fastEMA && context.fastEMA > context.slowEMA)
+   if(tick.ask > context.slowEMA && context.fastEMA > context.slowEMA)
       return 1;
 
-   if(tick.bid < context.fastEMA && context.fastEMA < context.slowEMA)
+   if(tick.bid < context.slowEMA && context.fastEMA < context.slowEMA)
       return -1;
 
    return 0;

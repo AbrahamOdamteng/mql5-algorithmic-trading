@@ -813,6 +813,12 @@ function Select-OneValidationCandidate {
   }
 
   $rank = 1
+  if ($null -eq $ranked) {
+    $ranked = @()
+  } else {
+    $ranked = @($ranked)
+  }
+
   foreach ($row in $ranked) {
     $row | Add-Member -NotePropertyName ValidationRank -NotePropertyValue $rank -Force
     $rank++

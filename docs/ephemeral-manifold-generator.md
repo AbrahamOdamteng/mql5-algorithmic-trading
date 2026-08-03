@@ -197,6 +197,93 @@ An OOS run may be unprofitable. That is recorded as data and must not stop the r
 
 The deterministic scoring algorithm must be fixed before the first full run of this process. It should rank validation survivors only, select one manifold per symbol, and avoid using OOS information directly or indirectly.
 
+## Next Planned Process: Grouped Perturbation Selection
+
+Do not switch to this process until forward-validation selection and trade-frequency handling are reviewed. The prior EMA-filtered `24`-month IS, `48`-month validation, `1`-month OOS, `1`-month step run completed but failed promotion because the old process only validated the top `25` IS candidates; W0001 selected a candidate with roughly `63%` validation DD.
+
+Completed non-perturbation diagnostic before perturbation:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-MRV-EURUSD-ForwardValidationGenerator.ps1
+```
+
+This run used MT5 optimizer `ForwardMode=1` to produce both IS and VAL candidates under process `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m`, with `24` months IS, `24` months validation, `1` month OOS, and `1` month rolling step. It was intentionally non-perturbation.
+
+Result: net OOS `+7,344.13`, `2 / 4` profitable windows, `1 / 4` zero-trade window, `22` OOS trades, and worst OOS DD `2.74%`. Selected validation DDs were low at `10.36%`, `8.35%`, `9.86%`, and `2.90%`, so the forward-validation approach fixed the obvious high-validation-DD candidate-selection flaw. It is still only an improved diagnostic, not a promoted process, because the sample is tiny, W0004 produced no OOS trades, and `g_RiskPercentOfBalance` was still optimized.
+
+After forward-validation selection and trade-frequency handling are reviewed, the next planned process should add local parameter-neighborhood robustness before OOS selection. The goal is to avoid promoting optimizer spike candidates that only work at one exact parameter point.
+
+Planned workflow:
+
+1. Run IS genetic optimization as normal.
+2. Run fixed validation tests for the selected IS candidates.
+3. Keep successful validation candidates according to the prospectively chosen validation rule.
+4. Group validation survivors by normalized parameter similarity.
+5. Select the medoid of each group, meaning the real candidate with the smallest average distance to other group members.
+6. Perturb only each group medoid using fixed single backtests, not MT5 genetic optimization.
+7. Score perturbation robustness on validation data only.
+8. Select one robust group medoid for OOS.
+9. Run OOS once with the selected frozen manifold; OOS remains measurement only.
+
+Perturbation should be implemented as explicit fixed tests with `Optimization=0`. Do not use the genetic optimizer for perturbation because it will search toward the best performers instead of testing the intended local neighborhood.
+
+Initial perturbation rule:
+
+- Use one-parameter-at-a-time `-10%` and `+10%` variants for optimized strategy inputs.
+- For small integer inputs, round sensibly and use at least `+/- 1` where a `10%` move would not change the value.
+- Do not perturb operational inputs such as magic number, deviation, drawing controls, starting balance, or `g_EnableTrading`.
+- Treat risk percentage as a separate risk-sensitivity test, not part of manifold perturbation.
+- Enforce valid parameter relationships such as fast EMA remaining below slow EMA.
+
+Initial perturbation pass rule:
+
+- At least `70%` of perturbation variants must be profitable on validation.
+- Median perturbation profit must be greater than `0`.
+- Median perturbation profit-to-drawdown ratio must be greater than `0`.
+- Reject catastrophic variants, initially defined as drawdown greater than `30%` or greater than `1.5x` the medoid's validation drawdown, whichever rule is chosen for that process version.
+
+Initial grouping rule:
+
+- Normalize each optimized parameter by its optimizer search range.
+- Use average absolute normalized parameter distance for candidate-to-candidate distance.
+- Start with a grouping threshold near `0.10` average normalized distance.
+- Prefer groups with at least `2` members, but allow singleton groups when too few validation survivors exist.
+
+Initial group ranking rule:
+
+1. Highest perturbation profitable rate.
+2. Highest median perturbation ratio.
+3. Highest medoid validation ratio.
+4. Highest medoid validation profit.
+5. Lowest medoid validation drawdown.
+6. Larger group size.
+
+Preferred first grouped-perturbation process version:
+
+- IS: `24` months.
+- Validation: `24` months.
+- OOS measurement: `3` months.
+- Rolling step: `1` month.
+
+Prepared runner for this process:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-MRV-EURUSD-ForwardPerturbationGenerator.ps1
+```
+
+The runner uses MT5 built-in forward testing for validation by running a `48`-month optimizer range with `ForwardMode=1`, so the first `24` months are IS and the second `24` months are validation. It then applies hard IS/VAL gates, groups validation survivors by normalized parameter distance, perturbs group medoids with fixed `Optimization=0` tests on the validation period, selects a perturbation-robust medoid, and runs a single frozen `3`-month OOS test.
+
+Reasoning: `24` months of IS keeps optimization recent, `24` months of validation is long enough to punish fragile regions without becoming a decade-long stale-regime filter, `3` months of OOS gives the edge more time to express itself than `1` month, and the `1`-month rolling step still tests deployment-date sensitivity.
+
+Comparison process versions worth testing later:
+
+- `24m IS / 12m VAL / 3m OOS / 1m step`.
+- `24m IS / 48m VAL / 3m OOS / 1m step`.
+- `36m IS / 12m VAL / 3m OOS / 1m step`.
+- `36m IS / 24m VAL / 3m OOS / 1m step`.
+
+The `IS -> perturb -> OOS` design should not be the default because perturbing on the same data used for optimization only proves a broad in-sample hill. Validation still provides the separate question: whether the parameter region survives data it was not optimized on.
+
 ## Prepared EURUSD Baseline Runner
 
 `Files/ThreeDayTrendSignal/Run-TDTS-EURUSD-EphemeralGenerator.ps1` is the prepared restartable runner for the first EURUSD baseline generator process.

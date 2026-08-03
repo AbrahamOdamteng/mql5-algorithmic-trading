@@ -28,8 +28,12 @@ Experimental variant state:
 - `Experts/ATRMomentumRelVolEMAFilter/ATRMomentumRelVolEMAFilterEA.mq5` is a separate A/B test EA created on `2026-07-31`.
 - It preserves ATR momentum plus relative-volume square detection, adds fast/slow EMA chart lines and trade gating, uses slow EMA as stop loss, and compiled with `0 errors, 0 warnings`.
 - `Profiles/Tester/ATRMomentumRelVolEMAFilter_WalkForward_Current.set` is the matching optimizer preset.
-- If this EA is used for generator research, keep the same throwaway-manifold structure: `36` months optimization, `3` months validation, `3` months OOS, then roll the full window forward by `1` month and repeat.
-- `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-EphemeralGenerator.ps1` is the separate restartable runner for the EMA-filtered EA. The prepared 2025 smoke run uses OOS starts `2025.01.01`, `2025.02.01`, and `2025.03.01`.
+- The completed EMA diagnostic `mrv_ema_eg_eurusd_2025_is24m_val48m_oos1m_step1m` failed promotion. It exposed a process flaw: validation was limited to the top `25` IS candidates, and W0001 selected a candidate with roughly `63%` validation DD.
+- The completed EMA forward-validation diagnostic `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m`, run by `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-ForwardValidationGenerator.ps1`, used MT5 optimizer `ForwardMode=1` so IS and VAL were generated together before OOS selection. It produced net OOS `+7,344.13`, `2 / 4` profitable windows, `1 / 4` zero-trade window, `22` OOS trades, and worst OOS DD `2.74%`. Treat it as an improved diagnostic, not a promoted process, because sample size is tiny, W0004 produced no OOS trades, and `g_RiskPercentOfBalance` was still optimized.
+- After forward-validation selection and trade-frequency handling are reviewed, the next planned research process is grouped validation-survivor perturbation before OOS selection: group successful validation candidates by parameter similarity, perturb only each group medoid with fixed non-optimizer tests, and promote only robust medoids to OOS.
+- The preferred first grouped-perturbation process version is `24` months IS, `24` months validation, `3` months OOS measurement, and `1` month rolling step.
+- `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-EphemeralGenerator.ps1` is the separate restartable runner for the EMA-filtered EA.
+- `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-ForwardPerturbationGenerator.ps1` is the prepared runner for the next EMA process. It uses MT5 built-in forward testing for validation, then fixed perturbation and OOS tests.
 
 See `three-day-trend-signal.md` for the active strategy details.
 

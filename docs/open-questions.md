@@ -76,6 +76,9 @@ These are the decisions that should be clarified before larger refactors or stra
 17. Funded-mode analysis should report monthly return distribution, payout survival, and breach probability over `3`, `6`, and `12` months instead of using fast `+10%` pass speed.
 18. Promising generator-selected portfolios should be stress-tested with cost/spread assumptions, trade-skip or Monte Carlo perturbations, and shifted windows before being treated as robust.
 19. OANDA personal-account track decision: `OANDA-EURXAU-P2012` is the current lead same-manifold candidate for `EURUSD + XAUUSD`. Its source optimizer identity is pass `2012`. Remaining work is operational validation rather than broad optimization: tiny live/demo forward test, deployment preset check, lot-step feasibility, news pause policy, and duplicate-order guard review.
+20. Planned next generator-selection approach after reviewing the completed EMA forward-validation diagnostic: keep validation, group successful validation candidates by normalized parameter similarity, choose each group's medoid, run fixed non-optimizer perturbation tests on medoids only, and promote robust medoids to OOS.
+21. Initial perturbation pass rule to test: at least `70%` of variants profitable, median perturbation profit `> 0`, median perturbation ratio `> 0`, and no catastrophic drawdown variant.
+22. Preferred first grouped-perturbation process version: `24m IS / 24m VAL / 3m OOS / 1m step`. Compare later against `24m/12m/3m`, `24m/48m/3m`, `36m/12m/3m`, and `36m/24m/3m`.
 
 ## Behavior Cluster Research
 
@@ -92,7 +95,7 @@ These are the decisions that should be clarified before larger refactors or stra
 
 ## Rolling Manifold Research
 
-1. The active research direction is now the Ephemeral Manifold Generator. The baseline process is per-symbol rolling `36`-month IS, `3`-month validation, monthly step, deterministic selection of exactly one frozen manifold, and one OOS measurement through `90` days; these are generator hyperparameters to test empirically, not settled optimal values.
+1. The active research direction is now the Ephemeral Manifold Generator. The baseline process is per-symbol rolling `36`-month IS, `3`-month validation, monthly step, deterministic selection of exactly one frozen manifold, and one OOS measurement through `90` days; these are generator hyperparameters to test empirically, not settled optimal values. The next planned process after the current EMA diagnostic is grouped validation-survivor perturbation before OOS selection.
 2. Which IS durations should be compared first: `2y`, `3y`, `4y`, `5y`, `6y`, or another grid?
 3. Which validation durations should be compared first: `3m`, `6m`, `9m`, `12m`, or another grid?
 4. What OOS deployment and decay horizons should be compared when measuring manifold lifespan?
