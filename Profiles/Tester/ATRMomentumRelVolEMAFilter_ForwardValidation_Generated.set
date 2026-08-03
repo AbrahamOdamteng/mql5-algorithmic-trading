@@ -2,18 +2,18 @@
 ; this file contains input parameters for testing/optimizing ATRMomentumRelVolEMAFilterEA expert advisor
 ; to use it in the strategy tester, click Load in the context menu of the Inputs tab
 ;
-g_ATR_Period=65||65||0||65||N
-g_MomentumATRMultiplier=3.75||3.75||0||3.75||N
-g_ContiguousCandles=6||6||0||6||N
-g_RelVolLength=35||35||0||35||N
-g_RelVolSignalCandles=9||9||0||9||N
-g_RelVolThreshold=3||3||0||3||N
+g_ATR_Period=30||30||0||30||N
+g_MomentumATRMultiplier=4.5||4.5||0||4.5||N
+g_ContiguousCandles=10||10||0||10||N
+g_RelVolLength=30||30||0||30||N
+g_RelVolSignalCandles=6||6||0||6||N
+g_RelVolThreshold=6.5||6.5||0||6.5||N
 g_FastEMALength=25||25||0||25||N
-g_SlowEMALength=525||525||0||525||N
-g_MinEMASeparationCandles=42||42||0||42||N
-g_RiskPercentOfBalance=0.6||0.6||0||0.6||N
+g_SlowEMALength=1650||1650||0||1650||N
+g_MinEMASeparationCandles=24||24||0||24||N
+g_RiskPercentOfBalance=0.1||0.1||0||0.1||N
 g_TakeProfitSLMultiple=1||1||0||1||N
-g_MaxStopLossATRMultiple=3.5||3.5||0||3.5||N
+g_MaxStopLossATRMultiple=10||10||0||10||N
 g_HistoryBarsToScan=2000||2000||1||2000||N
 g_MarkerSize=1||1||1||5||N
 g_DeleteObjectsOnInit=true||false||0||true||N

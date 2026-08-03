@@ -211,6 +211,20 @@ This run used MT5 optimizer `ForwardMode=1` to produce both IS and VAL candidate
 
 Result: net OOS `+7,344.13`, `2 / 4` profitable windows, `1 / 4` zero-trade window, `22` OOS trades, and worst OOS DD `2.74%`. Selected validation DDs were low at `10.36%`, `8.35%`, `9.86%`, and `2.90%`, so the forward-validation approach fixed the obvious high-validation-DD candidate-selection flaw. It is still only an improved diagnostic, not a promoted process, because the sample is tiny, W0004 produced no OOS trades, and `g_RiskPercentOfBalance` was still optimized.
 
+Score-gated reselection update from `2026-08-03`: the forward-validation runner was extended to read MT5 `Back Result` and `Forward Result` columns and then select one OOS candidate after fixed score gates. The tested rules remain diagnostics only because they reuse the same four EURUSD windows.
+
+| Score gate and ranking | Net OOS | Profitable windows | Zero-trade windows | OOS trades | Worst OOS DD |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `Back >= 90`, `Forward >= 90`, highest validation trades | `+6,134.56` | `2 / 4` | `1 / 4` | `13` | `1.81%` |
+| `Back >= 90`, `Forward >= 90`, highest validation DD | `+5,601.09` | `2 / 4` | `1 / 4` | `10` | `1.81%` |
+| `Back >= 90`, `Forward >= 90`, highest validation profit | `+5,184.96` | `2 / 4` | `1 / 4` | `8` | `1.39%` |
+| `Back >= 80`, `Forward >= 80`, highest validation profit | `+3,915.11` | `2 / 4` | `0 / 4` | `9` | `1.39%` |
+| `Back >= 90`, `Forward >= 90`, lowest validation trades | `+1,399.06` | `2 / 4` | `1 / 4` | `14` | `2.21%` |
+| `Back >= 90`, `Forward >= 90`, lowest validation DD | `+1,207.59` | `2 / 4` | `1 / 4` | `13` | `0.71%` |
+| `Back >= 90`, `Forward >= 90`, highest validation PF | `-493.73` | `1 / 4` | `1 / 4` | `12` | `3.07%` |
+
+The `80/80` lowest-DD test selected the same candidates as `90/90` lowest-DD. The current lead among score-gated modes is `90/90` highest validation trades. Zero-trade windows are acceptable in principle for a multi-symbol deployment, but portfolio-level trade frequency must be judged across symbols rather than from EURUSD alone.
+
 After forward-validation selection and trade-frequency handling are reviewed, the next planned process should add local parameter-neighborhood robustness before OOS selection. The goal is to avoid promoting optimizer spike candidates that only work at one exact parameter point.
 
 Planned workflow:

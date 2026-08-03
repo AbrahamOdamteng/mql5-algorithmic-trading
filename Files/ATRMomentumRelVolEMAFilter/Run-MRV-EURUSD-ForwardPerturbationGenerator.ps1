@@ -26,8 +26,10 @@ param(
   [double]$CatastrophicDDMultiple = 1.50,
   [int]$MaxGroupsToPerturb = 10,
   [double]$StartingDeposit = 100000.0,
-  [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades')]
+  [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades', 'BackForwardScoreThenLowestDD', 'BackForwardScoreThenHighestProfit', 'BackForwardScoreThenHighestTrades', 'BackForwardScoreThenLowestTrades', 'BackForwardScoreThenHighestPF', 'BackForwardScoreThenHighestDD')]
   [string]$ForwardSelectionMode = 'PositiveBestRatio',
+  [double]$MinBackScore = 80.0,
+  [double]$MinForwardScore = 80.0,
   [int]$OptimizationTimeoutMinutes = 1440,
   [int]$MaxRuntimeMinutes = 20,
   [int]$PollSeconds = 30,
@@ -424,12 +426,14 @@ function New-ForwardCandidates {
     $is = $optByPass[$pass]
 
     $isProfit = [double](Get-PropValue -Object $is -Names @('Profit') -Default 0.0)
+    $backScore = [double](Get-PropValue -Object $val -Names @('Back Result', 'Result') -Default (Get-PropValue -Object $is -Names @('Result') -Default 0.0))
     $isDD = [double](Get-PropValue -Object $is -Names @('Equity DD %') -Default 0.0)
     $isTrades = [int](Get-PropValue -Object $is -Names @('Trades') -Default 0)
     $isRatio = Get-ReportRatio -Profit $isProfit -DDPct $isDD
     $isPF = [double](Get-PropValue -Object $is -Names @('Profit Factor') -Default 0.0)
 
     $valProfit = [double](Get-PropValue -Object $val -Names @('Profit') -Default 0.0)
+    $forwardScore = [double](Get-PropValue -Object $val -Names @('Forward Result', 'Result') -Default 0.0)
     $valDD = [double](Get-PropValue -Object $val -Names @('Equity DD %') -Default 0.0)
     $valTrades = [int](Get-PropValue -Object $val -Names @('Trades') -Default 0)
     $valRatio = Get-ReportRatio -Profit $valProfit -DDPct $valDD
@@ -439,11 +443,13 @@ function New-ForwardCandidates {
     [pscustomobject]@{
       Pass = $pass
       ManifoldId = "MRV_EMA_Pass$pass"
+      BackScore = [Math]::Round($backScore, 2)
       ISProfit = [Math]::Round($isProfit, 2)
       ISDD = [Math]::Round($isDD, 2)
       ISRatio = [Math]::Round($isRatio, 3)
       ISTrades = $isTrades
       ISProfitFactor = [Math]::Round($isPF, 3)
+      ForwardScore = [Math]::Round($forwardScore, 2)
       ValidationProfit = [Math]::Round($valProfit, 2)
       ValidationDDPct = [Math]::Round($valDD, 2)
       ValidationRatio = [Math]::Round($valRatio, 3)
@@ -556,6 +562,36 @@ function Select-ForwardCandidate {
     }
     'LowestValidationTrades' {
       @($Candidates | Sort-Object @{ Expression = 'ValidationTrades'; Ascending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ValidationRatio'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+      break
+    }
+    'BackForwardScoreThenLowestDD' {
+      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      @($qualified | Sort-Object @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+      break
+    }
+    'BackForwardScoreThenHighestProfit' {
+      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      @($qualified | Sort-Object @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+      break
+    }
+    'BackForwardScoreThenHighestTrades' {
+      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      @($qualified | Sort-Object @{ Expression = 'ValidationTrades'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+      break
+    }
+    'BackForwardScoreThenLowestTrades' {
+      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      @($qualified | Sort-Object @{ Expression = 'ValidationTrades'; Ascending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+      break
+    }
+    'BackForwardScoreThenHighestPF' {
+      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      @($qualified | Sort-Object @{ Expression = 'ValidationProfitFactor'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+      break
+    }
+    'BackForwardScoreThenHighestDD' {
+      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      @($qualified | Sort-Object @{ Expression = 'ValidationDDPct'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationProfitFactor'; Descending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
     }
     default {
@@ -877,6 +913,8 @@ function Select-PerturbationCandidate {
       GroupSize = $group.GroupSize
       ManifoldId = $medoid.ManifoldId
       Pass = $medoid.Pass
+      BackScore = $medoid.BackScore
+      ForwardScore = $medoid.ForwardScore
       PerturbationTests = $rows.Count
       ProfitablePerturbations = $profitable.Count
       PerturbationProfitRate = [Math]::Round($profitRate, 3)
@@ -925,6 +963,8 @@ function Export-Selection {
     GroupSize = if ($null -ne $Selected) { $Selected.GroupSize } else { '' }
     ManifoldId = if ($null -ne $Selected) { $Selected.ManifoldId } else { '' }
     Pass = if ($null -ne $Selected) { $Selected.Pass } else { '' }
+    BackScore = if ($null -ne $Selected) { $Selected.BackScore } else { '' }
+    ForwardScore = if ($null -ne $Selected) { $Selected.ForwardScore } else { '' }
     PerturbationTests = if ($null -ne $Selected) { $Selected.PerturbationTests } else { '' }
     ProfitablePerturbations = if ($null -ne $Selected) { $Selected.ProfitablePerturbations } else { '' }
     PerturbationProfitRate = if ($null -ne $Selected) { $Selected.PerturbationProfitRate } else { '' }
@@ -988,7 +1028,7 @@ Write-Host "Symbol: $Symbol $Period"
 Write-Host "Hyperparameters: IS=$ISMonths months, VAL=$ValidationMonths months via MT5 forward, OOS=$OosMonths months, step=$StepMonths month(s)"
 Write-Host "Validation gates: IS profit > $MinISProfit, IS DD <= $MaxISDDPct%, IS trades >= $MinISTrades; VAL profit > $MinValidationProfit, VAL PF >= $MinValidationProfitFactor, VAL DD <= $MaxValidationDDPct%, VAL trades >= $MinValidationTrades"
 if ($SkipPerturbation) {
-  Write-Host "Forward selection mode: $ForwardSelectionMode. Perturbation stage disabled."
+  Write-Host "Forward selection mode: $ForwardSelectionMode. Score gates: back >= $MinBackScore, forward >= $MinForwardScore. Perturbation stage disabled."
 } else {
   Write-Host "Perturbation: +/-$PerturbationPercent% one-parameter variants, pass rate >= $MinPerturbationProfitRate, max DD <= $MaxPerturbationDDPct% and <= $CatastrophicDDMultiple x medoid VAL DD"
 }
@@ -1107,6 +1147,8 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
       AverageMedoidDistance = $_.AverageMedoidDistance
       ManifoldId = $_.Medoid.ManifoldId
       Pass = $_.Medoid.Pass
+      BackScore = $_.Medoid.BackScore
+      ForwardScore = $_.Medoid.ForwardScore
       ValidationProfit = $_.Medoid.ValidationProfit
       ValidationDDPct = $_.Medoid.ValidationDDPct
       ValidationRatio = $_.Medoid.ValidationRatio

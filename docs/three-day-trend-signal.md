@@ -166,6 +166,23 @@ Result for `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m`:
 
 Interpretation: the MT5-forward-validation process fixed the prior high-validation-DD selection flaw, but this is not promotable yet because the sample is tiny, W0004 produced no OOS trades, and `g_RiskPercentOfBalance` was still optimized.
 
+Score-gated reselection diagnostics were added on `2026-08-03` for the same four completed EURUSD windows. The runner now reads MT5 forward spreadsheet `Back Result` and `Forward Result` columns, exposes `-MinBackScore` and `-MinForwardScore`, and can rank candidates after score gates by validation DD, profit, trades, or profit factor. When saying "highest profit" in this runner, the current implementation means highest forward/validation profit; back/IS profit is not part of that ranking except through the score gate.
+
+Tested reselection results for `BackScore >= 90` and `ForwardScore >= 90`:
+
+| Mode | Net OOS | Profitable windows | Zero-trade windows | OOS trades | Worst OOS DD |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Highest validation trades | `+6,134.56` | `2 / 4` | `1 / 4` | `13` | `1.81%` |
+| Highest validation DD | `+5,601.09` | `2 / 4` | `1 / 4` | `10` | `1.81%` |
+| Highest validation profit | `+5,184.96` | `2 / 4` | `1 / 4` | `8` | `1.39%` |
+| Lowest validation trades | `+1,399.06` | `2 / 4` | `1 / 4` | `14` | `2.21%` |
+| Lowest validation DD | `+1,207.59` | `2 / 4` | `1 / 4` | `13` | `0.71%` |
+| Highest validation PF | `-493.73` | `1 / 4` | `1 / 4` | `12` | `3.07%` |
+
+Additional tested modes: `BackScore >= 80`, `ForwardScore >= 80`, then lowest validation DD selected the same candidates as the `90/90` lowest-DD mode. `80/80` highest validation profit produced net OOS `+3,915.11`, `2 / 4` profitable windows, `0 / 4` zero-trade windows, `9` trades, and worst OOS DD `1.39%`.
+
+Current interpretation: on this tiny EURUSD-only diagnostic, `90/90` highest validation trades is the current lead among tested score-gated selection modes. Do not promote it yet; the result needs multi-symbol testing, fixed-risk review because `g_RiskPercentOfBalance` remains optimized, and broader rolling windows.
+
 After forward-validation selection and trade-frequency handling are reviewed, the planned next process is grouped validation-survivor perturbation before OOS selection:
 
 - Run IS optimization and validation normally.

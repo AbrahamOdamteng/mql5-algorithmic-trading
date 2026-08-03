@@ -217,6 +217,50 @@ This mode is positive across the first six OOS windows but still has three losin
 
 `PositiveLowestTradesFinalMonth` with default final-month profit confirmation was also tested across the first six windows and produced net OOS `+7,881.33`, `3 / 6` profitable windows, worst DD `25.62%`, and `493` trades. It is close but weaker than `PositiveLowestTrades`.
 
+## MRV EMA Forward-Validation Runner
+
+Use `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-ForwardValidationGenerator.ps1` for the current four-window EURUSD EMA forward-validation diagnostic. Pass `-ForwardSelectionMode` explicitly when reproducing a specific diagnostic rule, because the wrapper default may change as new modes are tested.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-MRV-EURUSD-ForwardValidationGenerator.ps1 `
+  -MinBackScore 90 `
+  -MinForwardScore 90 `
+  -ForwardSelectionMode BackForwardScoreThenHighestTrades
+```
+
+Default process:
+
+- Experiment: `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m`.
+- IS: `24` months.
+- Validation: `24` months through MT5 optimizer `ForwardMode=1`.
+- OOS: `1` month.
+- Windows: `2025.01.01` through `2025.04.01` by default.
+- Perturbation: disabled in this wrapper.
+
+Important parser note: MT5 forward XML exports score columns as `Forward Result` and `Back Result`. Do not use plain `Result` for forward score gates.
+
+Useful score-gated options:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-MRV-EURUSD-ForwardValidationGenerator.ps1 `
+  -MinBackScore 90 `
+  -MinForwardScore 90 `
+  -ForwardSelectionMode BackForwardScoreThenHighestTrades
+```
+
+Supported score-gated `-ForwardSelectionMode` values include:
+
+- `BackForwardScoreThenHighestTrades`
+- `BackForwardScoreThenHighestProfit`
+- `BackForwardScoreThenLowestDD`
+- `BackForwardScoreThenHighestDD`
+- `BackForwardScoreThenLowestTrades`
+- `BackForwardScoreThenHighestPF`
+
+When using `BackForwardScoreThenHighestProfit`, "highest profit" means highest forward/validation profit. Back/IS profit is not part of that ranking except through `BackScore`.
+
+The latest four-window EURUSD diagnostic lead is `BackScore >= 90`, `ForwardScore >= 90`, then highest validation trades, with net OOS `+6,134.56`, `13` OOS trades, and worst OOS DD `1.81%`. Treat this as a tiny diagnostic, not a promoted process.
+
 ## Legacy Rolling Manifold Cycle Runner
 
 Use `Files/WeekHighLow/Run-RollingManifoldCycle.ps1` to run one configurable loop of the rolling short-horizon manifold workflow.
