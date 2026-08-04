@@ -261,6 +261,18 @@ When using `BackForwardScoreThenHighestProfit`, "highest profit" means highest f
 
 The latest four-window EURUSD diagnostic lead is `BackScore >= 90`, `ForwardScore >= 90`, then highest validation trades, with net OOS `+6,134.56`, `13` OOS trades, and worst OOS DD `1.81%`. Treat this as a tiny diagnostic, not a promoted process.
 
+Completed W0005-W0006 extension:
+
+- The wrapper ran W0005 and W0006 after the completed four-window diagnostic.
+- W0005 used `2021.05.01 -> 2023.05.01` IS, `2023.05.01 -> 2025.05.01` forward validation, and `2025.05.01 -> 2025.06.01` OOS. It produced no selection because no candidate passed both `BackScore >= 90` and `ForwardScore >= 90`.
+- W0006 used `2021.06.01 -> 2023.06.01` IS, `2023.06.01 -> 2025.06.01` forward validation, and `2025.06.01 -> 2025.07.01` OOS. It selected `MRV_EMA_Pass2975` and produced OOS `+1,518.76`, DD `1.25%`, and `3` trades.
+- Clean six-window aggregate for `BackForwardScoreThenHighestTrades` with `MinBackScore=90` and `MinForwardScore=90`: net OOS `+7,653.32`, selected windows `5 / 6`, `16` OOS trades, and worst OOS DD `1.81%`.
+- Command to run/resume the current wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-MRV-EURUSD-ForwardValidationGenerator.ps1
+```
+
 ## Legacy Rolling Manifold Cycle Runner
 
 Use `Files/WeekHighLow/Run-RollingManifoldCycle.ps1` to run one configurable loop of the rolling short-horizon manifold workflow.

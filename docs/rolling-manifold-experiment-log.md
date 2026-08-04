@@ -40,6 +40,30 @@ Each entry should include:
 
 ## Entries
 
+### 2026-08-04 - MRV EMA Forward-Validation Score-Gated Six-Window Extension
+
+- Goal: Extend the completed EURUSD EMA forward-validation diagnostic from four monthly OOS windows to six, while preserving the same non-perturbation `24m IS / 24m VAL / 1m OOS / 1m step` process.
+- Change or experiment: Added score-gated forward-selection modes to `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-ForwardPerturbationGenerator.ps1` and wrapper defaults in `Run-MRV-EURUSD-ForwardValidationGenerator.ps1`. Important parser fix: MT5 forward spreadsheets expose score columns as `Back Result` and `Forward Result`, not plain `Result`.
+- Selection rule under test: `BackForwardScoreThenHighestTrades`, requiring `BackScore >= 90` and `ForwardScore >= 90`, then selecting the candidate with the highest validation trade count. Tie-breakers are validation profit descending, validation DD ascending, forward score descending, back score descending, and pass ascending.
+- Test setup: Process ID `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m`; symbol `EURUSD`; timeframe `H1`; MT5 optimizer `ForwardMode=1`; each window uses `24` months IS/back, `24` months forward validation, `1` month OOS, and `1` month step. W0005 OOS was `2025.05.01 -> 2025.06.01`; W0006 OOS was `2025.06.01 -> 2025.07.01`.
+- Prior four-window clean result for this same rule: W0001 selected `MRV_EMA_Pass3285` and produced `+5,218.80`, DD `1.81%`, `6` trades; W0002 selected `MRV_EMA_Pass9045` and produced `-402.31`, DD `0.55%`, `4` trades; W0003 selected `MRV_EMA_Pass2532` and produced `+1,318.07`, DD `0.60%`, `3` trades; W0004 selected `MRV_EMA_Pass3569` and produced `0.00`, DD `0.00%`, `0` trades.
+- W0005 outcome: No OOS selection. `207` candidates passed normal IS/VAL gates. `99` had `BackScore >= 90`, `6` had `ForwardScore >= 90`, and `0` passed both score gates.
+- W0006 outcome: Selected `MRV_EMA_Pass2975` with `BackScore=99.48`, `ForwardScore=98.55`, validation profit `15,372.43`, validation DD `3.45%`, validation ratio `4.455`, and `93` validation trades. OOS result was `+1,518.76`, DD `1.25%`, ratio `1.215`, and `3` trades.
+- Clean six-window aggregate: net OOS `+7,653.32`; selected windows `5 / 6`; profitable selected windows `3`; losing selected windows `1`; zero-trade selected windows `1`; no-selection windows `1`; OOS trades `16`; worst OOS DD `1.81%`.
+- Window table for the clean six-window `90/90` highest-validation-trades rule:
+
+| Window | OOS period | Status | Pass | Back score | Forward score | Validation trades | OOS profit | OOS DD | OOS trades |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| W0001 | `2025.01.01 -> 2025.02.01` | Selected | `3285` | `98.61` | `94.03` | `190` | `+5,218.80` | `1.81%` | `6` |
+| W0002 | `2025.02.01 -> 2025.03.01` | Selected | `9045` | `99.98` | `97.02` | `153` | `-402.31` | `0.55%` | `4` |
+| W0003 | `2025.03.01 -> 2025.04.01` | Selected | `2532` | `92.59` | `93.00` | `55` | `+1,318.07` | `0.60%` | `3` |
+| W0004 | `2025.04.01 -> 2025.05.01` | Selected | `3569` | `98.20` | `91.33` | `270` | `0.00` | `0.00%` | `0` |
+| W0005 | `2025.05.01 -> 2025.06.01` | No selection | - | - | - | - | - | - | - |
+| W0006 | `2025.06.01 -> 2025.07.01` | Selected | `2975` | `99.48` | `98.55` | `93` | `+1,518.76` | `1.25%` | `3` |
+
+- Interpretation: The six-window extension improved the score-gated highest-trades diagnostic from net `+6,134.56` over four windows to net `+7,653.32` over six calendar deployment starts. The abstention in W0005 is acceptable in the intended multi-symbol framing, but it shows the `90/90` score gate can be strict. Results are still tiny-sample and EURUSD-only; do not promote without multi-symbol testing, fixed-risk review because `g_RiskPercentOfBalance` remains optimized, and more deployment windows.
+- Decision or next step: Treat `90/90` highest validation trades as the current lead MRV EMA forward-selection diagnostic. Next useful work is to test the same process on additional symbols, or to proceed to grouped validation-survivor perturbation after trade-frequency handling and fixed-risk assumptions are reviewed.
+
 ### 2026-07-31 - MRV EMA-Filtered Variant Three-Window 2025 Diagnostic
 
 - Goal: Test whether the experimental ATR momentum plus relative-volume EMA-filtered EA can improve the throwaway-manifold generator process without replacing the current TDTS baseline.

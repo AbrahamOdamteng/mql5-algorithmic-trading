@@ -225,6 +225,8 @@ Score-gated reselection update from `2026-08-03`: the forward-validation runner 
 
 The `80/80` lowest-DD test selected the same candidates as `90/90` lowest-DD. The current lead among score-gated modes is `90/90` highest validation trades. Zero-trade windows are acceptable in principle for a multi-symbol deployment, but portfolio-level trade frequency must be judged across symbols rather than from EURUSD alone.
 
+W0005-W0006 extension for the `90/90` highest-validation-trades rule completed after the initial four-window diagnostic. W0005 recorded no selection because normal IS/VAL gates left `207` survivors but none passed both score gates; `99` passed the back-score gate alone and `6` passed the forward-score gate alone. W0006 selected `MRV_EMA_Pass2975` and produced OOS `+1,518.76`, DD `1.25%`, and `3` trades. Clean six-window aggregate for this rule is net OOS `+7,653.32`, selected windows `5 / 6`, `3` profitable selected windows, `1` losing selected window, `1` zero-trade selected window, `1` no-selection window, `16` OOS trades, and worst OOS DD `1.81%`.
+
 After forward-validation selection and trade-frequency handling are reviewed, the next planned process should add local parameter-neighborhood robustness before OOS selection. The goal is to avoid promoting optimizer spike candidates that only work at one exact parameter point.
 
 Planned workflow:

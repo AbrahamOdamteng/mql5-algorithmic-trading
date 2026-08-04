@@ -1,13 +1,13 @@
 param(
   [string]$TerminalPath = 'C:\Program Files\MetaTrader 5\terminal64.exe',
   [datetime]$FirstOosStart = '2025-01-01',
-  [datetime]$LastOosStart = '2025-04-01',
+  [datetime]$LastOosStart = '2025-06-01',
   [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades', 'BackForwardScoreThenLowestDD', 'BackForwardScoreThenHighestProfit', 'BackForwardScoreThenHighestTrades', 'BackForwardScoreThenLowestTrades', 'BackForwardScoreThenHighestPF', 'BackForwardScoreThenHighestDD')]
-  [string]$ForwardSelectionMode = 'BackForwardScoreThenHighestDD',
+  [string]$ForwardSelectionMode = 'BackForwardScoreThenHighestTrades',
   [double]$MinBackScore = 90.0,
   [double]$MinForwardScore = 90.0,
-  [int]$StartAtWindow = 1,
-  [int]$MaxWindows = 0,
+  [int]$StartAtWindow = 5,
+  [int]$MaxWindows = 2,
   [int]$MaxFixedTests = 0,
   [double]$MinISProfit = 0.0,
   [double]$MaxISDDPct = 30.0,

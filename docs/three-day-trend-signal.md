@@ -183,6 +183,19 @@ Additional tested modes: `BackScore >= 80`, `ForwardScore >= 80`, then lowest va
 
 Current interpretation: on this tiny EURUSD-only diagnostic, `90/90` highest validation trades is the current lead among tested score-gated selection modes. Do not promote it yet; the result needs multi-symbol testing, fixed-risk review because `g_RiskPercentOfBalance` remains optimized, and broader rolling windows.
 
+Follow-up W0005-W0006 overnight extension using the same `90/90` highest-validation-trades rule:
+
+| Window | OOS period | Status | Pass | Back score | Forward score | Validation trades | OOS profit | OOS DD | OOS trades |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| W0001 | `2025.01.01 -> 2025.02.01` | Selected | `3285` | `98.61` | `94.03` | `190` | `+5,218.80` | `1.81%` | `6` |
+| W0002 | `2025.02.01 -> 2025.03.01` | Selected | `9045` | `99.98` | `97.02` | `153` | `-402.31` | `0.55%` | `4` |
+| W0003 | `2025.03.01 -> 2025.04.01` | Selected | `2532` | `92.59` | `93.00` | `55` | `+1,318.07` | `0.60%` | `3` |
+| W0004 | `2025.04.01 -> 2025.05.01` | Selected | `3569` | `98.20` | `91.33` | `270` | `0.00` | `0.00%` | `0` |
+| W0005 | `2025.05.01 -> 2025.06.01` | No selection | - | - | - | - | - | - | - |
+| W0006 | `2025.06.01 -> 2025.07.01` | Selected | `2975` | `99.48` | `98.55` | `93` | `+1,518.76` | `1.25%` | `3` |
+
+Six-window aggregate for this rule: net OOS `+7,653.32`, selected windows `5 / 6`, `3` profitable selected windows, `1` losing selected window, `1` zero-trade selected window, `1` no-selection window, `16` OOS trades, and worst OOS DD `1.81%`. W0005 abstained because `207` candidates passed normal IS/VAL gates, but `0` passed both `BackScore >= 90` and `ForwardScore >= 90`.
+
 After forward-validation selection and trade-frequency handling are reviewed, the planned next process is grouped validation-survivor perturbation before OOS selection:
 
 - Run IS optimization and validation normally.
