@@ -1,6 +1,7 @@
 param(
   [string]$TerminalPath = 'C:\Program Files\MetaTrader 5\terminal64.exe',
   [string]$ExperimentId = 'mrv_ema_fp_eurusd_2025_is24m_val24m_oos3m_step1m',
+  [string]$SourceOptimizerExperimentId = '',
   [string]$Symbol = 'EURUSD',
   [string]$Period = 'H1',
   [string]$TemplateSetFile = 'ATRMomentumRelVolEMAFilter_WalkForward_Current.set',
@@ -26,7 +27,7 @@ param(
   [double]$CatastrophicDDMultiple = 1.50,
   [int]$MaxGroupsToPerturb = 10,
   [double]$StartingDeposit = 100000.0,
-  [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades', 'BackForwardScoreThenLowestDD', 'BackForwardScoreThenHighestProfit', 'BackForwardScoreThenHighestTrades', 'BackForwardScoreThenLowestTrades', 'BackForwardScoreThenHighestPF', 'BackForwardScoreThenHighestDD', 'BackForwardScoreFallbackHighestTrades')]
+  [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades', 'BackForwardScoreThenLowestDD', 'BackForwardScoreThenHighestProfit', 'BackForwardScoreThenHighestTrades', 'BackForwardScoreThenHighestTotalTrades', 'BackForwardScoreThenLowestTrades', 'BackForwardScoreThenHighestPF', 'BackForwardScoreThenHighestDD', 'BackForwardScoreFallbackHighestTrades')]
   [string]$ForwardSelectionMode = 'PositiveBestRatio',
   [double]$MinBackScore = 80.0,
   [double]$MinForwardScore = 80.0,
@@ -39,6 +40,7 @@ param(
   [switch]$SkipPerturbation,
   [switch]$PrepareOnly,
   [switch]$RunExistingReports,
+  [switch]$StrictScoreGates,
   [switch]$ClearTesterCache
 )
 
@@ -468,6 +470,7 @@ function New-ForwardCandidates {
       ValidationDDPct = [Math]::Round($valDD, 2)
       ValidationRatio = [Math]::Round($valRatio, 3)
       ValidationTrades = $valTrades
+      SumTradeCount = $isTrades + $valTrades
       ValidationProfitFactor = [Math]::Round($valPF, 3)
       ValidationScore = [Math]::Round($valScore, 6)
       ATR = [int](Get-PropValue -Object $val -Names @('g_ATR_Period') -Default (Get-PropValue -Object $is -Names @('g_ATR_Period') -Default 0))
@@ -552,6 +555,16 @@ function New-CandidateGroups {
   }
 }
 
+function Test-BackForwardScoreGate {
+  param([object]$Candidate, [double]$BackThreshold, [double]$ForwardThreshold)
+
+  if ($StrictScoreGates) {
+    return ([double]$Candidate.BackScore -gt $BackThreshold -and [double]$Candidate.ForwardScore -gt $ForwardThreshold)
+  }
+
+  return ([double]$Candidate.BackScore -ge $BackThreshold -and [double]$Candidate.ForwardScore -ge $ForwardThreshold)
+}
+
 function Select-ForwardCandidate {
   param([object[]]$Candidates)
 
@@ -580,38 +593,43 @@ function Select-ForwardCandidate {
       break
     }
     'BackForwardScoreThenLowestDD' {
-      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      $qualified = @($Candidates | Where-Object { Test-BackForwardScoreGate -Candidate $_ -BackThreshold $MinBackScore -ForwardThreshold $MinForwardScore })
       @($qualified | Sort-Object @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
     }
     'BackForwardScoreThenHighestProfit' {
-      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      $qualified = @($Candidates | Where-Object { Test-BackForwardScoreGate -Candidate $_ -BackThreshold $MinBackScore -ForwardThreshold $MinForwardScore })
       @($qualified | Sort-Object @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
     }
     'BackForwardScoreThenHighestTrades' {
-      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      $qualified = @($Candidates | Where-Object { Test-BackForwardScoreGate -Candidate $_ -BackThreshold $MinBackScore -ForwardThreshold $MinForwardScore })
       @($qualified | Sort-Object @{ Expression = 'ValidationTrades'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
     }
+    'BackForwardScoreThenHighestTotalTrades' {
+      $qualified = @($Candidates | Where-Object { Test-BackForwardScoreGate -Candidate $_ -BackThreshold $MinBackScore -ForwardThreshold $MinForwardScore })
+      @($qualified | Sort-Object @{ Expression = 'SumTradeCount'; Descending = $true }, @{ Expression = 'ValidationTrades'; Descending = $true }, @{ Expression = 'ISTrades'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+      break
+    }
     'BackForwardScoreThenLowestTrades' {
-      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      $qualified = @($Candidates | Where-Object { Test-BackForwardScoreGate -Candidate $_ -BackThreshold $MinBackScore -ForwardThreshold $MinForwardScore })
       @($qualified | Sort-Object @{ Expression = 'ValidationTrades'; Ascending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
     }
     'BackForwardScoreThenHighestPF' {
-      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      $qualified = @($Candidates | Where-Object { Test-BackForwardScoreGate -Candidate $_ -BackThreshold $MinBackScore -ForwardThreshold $MinForwardScore })
       @($qualified | Sort-Object @{ Expression = 'ValidationProfitFactor'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
     }
     'BackForwardScoreThenHighestDD' {
-      $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $MinBackScore -and [double]$_.ForwardScore -ge $MinForwardScore })
+      $qualified = @($Candidates | Where-Object { Test-BackForwardScoreGate -Candidate $_ -BackThreshold $MinBackScore -ForwardThreshold $MinForwardScore })
       @($qualified | Sort-Object @{ Expression = 'ValidationDDPct'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationProfitFactor'; Descending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
     }
     'BackForwardScoreFallbackHighestTrades' {
       foreach ($threshold in @(90.0, 85.0, 80.0, 75.0)) {
-        $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $threshold -and [double]$_.ForwardScore -ge $threshold })
+        $qualified = @($Candidates | Where-Object { Test-BackForwardScoreGate -Candidate $_ -BackThreshold $threshold -ForwardThreshold $threshold })
         if ($qualified.Count -gt 0) {
           $scoreGateThreshold = $threshold
           @($qualified | Sort-Object @{ Expression = 'ValidationTrades'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
@@ -1025,7 +1043,9 @@ function Export-Selection {
     ValidationProfit = if ($null -ne $Selected) { $Selected.ValidationProfit } else { '' }
     ValidationDDPct = if ($null -ne $Selected) { $Selected.ValidationDDPct } else { '' }
     ValidationRatio = if ($null -ne $Selected) { $Selected.ValidationRatio } else { '' }
+    ISTrades = if ($null -ne $Selected) { $Selected.ISTrades } else { '' }
     ValidationTrades = if ($null -ne $Selected) { $Selected.ValidationTrades } else { '' }
+    SumTradeCount = if ($null -ne $Selected) { $Selected.SumTradeCount } else { '' }
     ATR = if ($null -ne $Selected) { $Selected.ATR } else { '' }
     MomentumATRMultiplier = if ($null -ne $Selected) { $Selected.MomentumATRMultiplier } else { '' }
     ContiguousCandles = if ($null -ne $Selected) { $Selected.ContiguousCandles } else { '' }
@@ -1050,6 +1070,7 @@ $templateSetPath = Join-Path $testerProfilesDir $TemplateSetFile
 $tempSetPath = Join-Path $testerProfilesDir $TempSetFile
 $experimentDir = Join-Path $terminalDataRoot "reports\$ExperimentId"
 $reportSubdir = "reports\$ExperimentId"
+$sourceOptimizerReportSubdir = if ([string]::IsNullOrWhiteSpace($SourceOptimizerExperimentId)) { $reportSubdir } else { "reports\$SourceOptimizerExperimentId" }
 $windowsPath = Join-Path $experimentDir 'windows.csv'
 $selectionSummaryPath = Join-Path $experimentDir 'selection_summary.csv'
 $oosSummaryPath = Join-Path $experimentDir 'oos_summary.csv'
@@ -1075,11 +1096,13 @@ $windows | Export-Csv -LiteralPath $windowsPath -NoTypeInformation -Encoding ASC
 
 Write-Host "Experiment: $ExperimentId"
 Write-Host "Directory: $experimentDir"
+if ($sourceOptimizerReportSubdir -ne $reportSubdir) { Write-Host "Source optimizer reports: $sourceOptimizerReportSubdir" }
 Write-Host "Symbol: $Symbol $Period"
 Write-Host "Hyperparameters: IS=$ISMonths months, VAL=$ValidationMonths months via MT5 forward, OOS=$OosMonths months, step=$StepMonths month(s)"
 Write-Host "Validation gates: IS profit > $MinISProfit, IS DD <= $MaxISDDPct%, IS trades >= $MinISTrades; VAL profit > $MinValidationProfit, VAL PF >= $MinValidationProfitFactor, VAL DD <= $MaxValidationDDPct%, VAL trades >= $MinValidationTrades"
 if ($SkipPerturbation) {
-  Write-Host "Forward selection mode: $ForwardSelectionMode. Score gates: back >= $MinBackScore, forward >= $MinForwardScore. Perturbation stage disabled."
+  $scoreOperator = if ($StrictScoreGates) { '>' } else { '>=' }
+  Write-Host "Forward selection mode: $ForwardSelectionMode. Score gates: back $scoreOperator $MinBackScore, forward $scoreOperator $MinForwardScore. Perturbation stage disabled."
 } else {
   Write-Host "Perturbation: +/-$PerturbationPercent% one-parameter variants, pass rate >= $MinPerturbationProfitRate, max DD <= $MaxPerturbationDDPct% and <= $CatastrophicDDMultiple x medoid VAL DD"
 }
@@ -1115,11 +1138,16 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
 
   $dateLabel = ($window.OptimizerStart -replace '\.', '') + '_' + ($window.OptimizerEnd -replace '\.', '')
   $optimizerReport = "$reportSubdir\optimizer\$($window.WindowId)_$Symbol`_$Period`_GeneticForward_$dateLabel.xml"
-  $forwardReport = Get-ForwardReportName -Report $optimizerReport
-  $optimizerXml = Convert-ReportPathToFullPath -ReportRoot $reportRoot -ExpectedReport $optimizerReport
-  $forwardXml = Convert-ReportPathToFullPath -ReportRoot $reportRoot -ExpectedReport $forwardReport
+  $sourceOptimizerReport = "$sourceOptimizerReportSubdir\optimizer\$($window.WindowId)_$Symbol`_$Period`_GeneticForward_$dateLabel.xml"
+  $sourceForwardReport = Get-ForwardReportName -Report $sourceOptimizerReport
+  $optimizerXml = Convert-ReportPathToFullPath -ReportRoot $reportRoot -ExpectedReport $sourceOptimizerReport
+  $forwardXml = Convert-ReportPathToFullPath -ReportRoot $reportRoot -ExpectedReport $sourceForwardReport
 
   if (-not (Test-Path -LiteralPath $optimizerXml) -or -not (Test-Path -LiteralPath $forwardXml)) {
+    if ($sourceOptimizerReportSubdir -ne $reportSubdir) {
+      throw "Source optimizer/forward reports missing for $($window.WindowId): $optimizerXml / $forwardXml"
+    }
+    $forwardReport = Get-ForwardReportName -Report $optimizerReport
     $optimizerRun = Invoke-ForwardOptimizerRun -Window $window -ConfigPath $TempConfigPath -Report $optimizerReport -ExpectedOptimizerPath $optimizerXml -ExpectedForwardPath $forwardXml -TemplateSetFileName $TemplateSetFile
     Append-OptimizerProgress -ProgressPath $optimizerProgressPath -Row ([pscustomobject]@{
       Timestamp = $optimizerRun.FinishedAt
@@ -1208,7 +1236,9 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
       ValidationProfit = $_.Medoid.ValidationProfit
       ValidationDDPct = $_.Medoid.ValidationDDPct
       ValidationRatio = $_.Medoid.ValidationRatio
+      ISTrades = $_.Medoid.ISTrades
       ValidationTrades = $_.Medoid.ValidationTrades
+      SumTradeCount = $_.Medoid.SumTradeCount
       ATR = $_.Medoid.ATR
       MomentumATRMultiplier = $_.Medoid.MomentumATRMultiplier
       ContiguousCandles = $_.Medoid.ContiguousCandles

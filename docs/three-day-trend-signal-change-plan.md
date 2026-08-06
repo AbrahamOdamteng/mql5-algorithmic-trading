@@ -33,29 +33,29 @@ Add proposed changes here before implementation.
 
 | ID | Status | Area | Proposal | Decision | Notes |
 | --- | --- | --- | --- | --- | --- |
-| TDTS-001 | Ready | Trend filter inputs | Add two EMA calculations: a slow EMA and a fast EMA. Each EMA period should be controlled by an optimizable EA input named `g_SlowEMALength` and `g_FastEMALength`. The slow EMA length must be greater than the fast EMA length. | Implement in revised EA. | Defaults: fast `100`, slow `400`. Use chart timeframe, close price, and `INIT_PARAMETERS_INCORRECT` for `g_SlowEMALength <= g_FastEMALength`. Fast EMA optimizer range: min `25`, max `1975`, step `25`. Slow EMA optimizer range: min `50`, max `2000`, step `25`. |
-| TDTS-002 | Ready | Trend filter gating | Add an optimizable integer input named `g_MinEMASeparationCandles`. A trade can only trigger after the fast and slow EMAs have remained separated for at least this many closed candles since the most recent cross or touch. | Implement in revised EA. | Optimizer range: min `0`, max `72`, step `3`. Use a computed helper, not persistent state. Count includes the signal candle. Exact equality is a touch and resets the count. |
+| TDTS-001 | Ready | Trend filter inputs | Add two EMA calculations: a slow EMA and a fast EMA. Each EMA period should be controlled by an optimizable EA input named `g_SlowEMALength` and `g_FastEMALength`. The slow EMA length must be greater than the fast EMA length. | Implement in revised EA. | Defaults: fast `100`, slow `400`. Use chart timeframe, close price, and `INIT_PARAMETERS_INCORRECT` for `g_SlowEMALength <= g_FastEMALength`. Current optimizer preset range: fast `25 -> 300` step `25`; slow `100 -> 800` step `50`. |
+| TDTS-002 | Ready | Trend filter gating | Add an optimizable integer input named `g_MinEMASeparationCandles`. A trade can only trigger after the fast and slow EMAs have remained separated for at least this many closed candles since the most recent cross or touch. | Implement in revised EA. | Current optimizer preset range: min `0`, max `24`, step `3`. Use a computed helper, not persistent state. Count includes the signal candle. Exact equality is a touch and resets the count. |
 | TDTS-003 | Ready | Trade entry filter | Trade only when a square marker exists and the EMA/price trend gate gives direction. Long trades require both current price and fast EMA above slow EMA. Short trades require both current price and fast EMA below slow EMA. In both cases, the EMAs must have been separated for at least `g_MinEMASeparationCandles`. | Implement in revised EA. | Square color does not matter. Any square is enough to satisfy the square requirement; trade direction comes from current bid/ask and fast EMA being on the same side of the slow EMA. Do not remember blocked square signals for later. |
-| TDTS-004 | Ready | Risk sizing | Confirm optimizable risk-percentage input `g_RiskPercentOfBalance`, with optimizer range `0.1` to `1.0` step `0.1`. This is the percentage of fixed starting balance risked per trade. | Implement in revised EA. | If starting balance is `100000`, value `1.0` risks `1000` per trade and value `0.1` risks `100` per trade. Keep existing fixed-starting-balance risk model. |
-| TDTS-005 | Ready | Trade execution | When all filters are met, open a market order at current bid/ask. Set stop loss at the slow EMA from the closed signal candle. Set take profit as a multiple of the stop-loss distance using optimizable input `g_TakeProfitSLMultiple`. Remove the old ATR stop-loss multiplier from the revised EA. | Implement in revised EA. | TP factor optimizer range: `1.0` to `5.0` with step `0.25`. Skip if the slow EMA is on the wrong side of entry or if broker stop-distance checks fail. |
+| TDTS-004 | Ready | Risk sizing | Use fixed-starting-balance risk via `g_RiskPercentOfBalance`. | Implement in revised EA. | Current optimizer preset fixes `g_RiskPercentOfBalance=1.0` and disables optimization. If starting balance is `100000`, value `1.0` risks `1000` per trade. |
+| TDTS-005 | Ready | Trade execution | When all filters are met, open a market order at current bid/ask. Set stop loss at the slow EMA from the closed signal candle. Set take profit as a multiple of the stop-loss distance using optimizable input `g_TakeProfitSLMultiple`. Remove the old ATR stop-loss multiplier from the revised EA. | Implement in revised EA. | Current TP factor optimizer range: `1.0` to `3.0` with step `0.5`. Skip if the slow EMA is on the wrong side of entry or if broker stop-distance checks fail. |
 | TDTS-006 | Ready | Stop-loss safety gate | Add an optimizable maximum stop-loss distance input named `g_MaxStopLossATRMultiple`. If the slow-EMA stop distance is greater than `ATR * g_MaxStopLossATRMultiple`, skip the trade. | Implement in revised EA. | Optimizer range: min `1.0`, max `10.0`, step `0.5`. Default `3.0`. This prevents oversized EMA-based stops from creating poor reward/risk or invalid sizing. |
-| TDTS-007 | Ready | Relative volume inputs | Confirm optimizable relative-volume inputs. `g_RelVolLength` controls how many prior days are used to calculate the relative-volume average. Rename `g_RelVolCandles` to `g_RelVolSignalCandles`; it controls how many closed candles are accumulated for the relative-volume signal. | Implement in revised EA. | Keep the name `g_RelVolLength`. `g_RelVolLength` range: min `5` days, max `90` days, step `5` days. `g_RelVolSignalCandles` range: min `1`, max `10`, step `1`. |
+| TDTS-007 | Ready | Relative volume inputs | Confirm optimizable relative-volume inputs. `g_RelVolLength` controls how many prior days are used to calculate the relative-volume average. Rename `g_RelVolCandles` to `g_RelVolSignalCandles`; it controls how many closed candles are accumulated for the relative-volume signal. | Implement in revised EA. | Keep the name `g_RelVolLength`. Current `g_RelVolLength` range: min `10` days, max `40` days, step `5` days. `g_RelVolSignalCandles` range: min `1`, max `10`, step `1`. |
 | TDTS-008 | Ready | Chart visuals | Draw both EMA lines onto the chart in the revised EA. | Implement in revised EA. | Slow EMA must be blue. Fast EMA must be red. EMA drawing is visual-only and must not change signal or trade logic. |
 
 ## Draft Optimizer Inputs
 
 | Input | Type | Min | Max | Step | Notes |
 | --- | --- | ---: | ---: | ---: | --- |
-| `g_FastEMALength` | Integer candles | `25` | `1975` | `25` | Must be less than `g_SlowEMALength`. |
-| `g_SlowEMALength` | Integer candles | `50` | `2000` | `25` | Must be greater than `g_FastEMALength`. |
-| `g_ATR_Period` | Integer candles | `10` | `500` | `5` | ATR period used for momentum threshold and max stop-loss size gate. Range is intended for H1/H2/H3/H4 and M30/M15 usage rather than daily-chart defaults. |
-| `g_MomentumATRMultiplier` | Floating point | `1.0` | `10.0` | `0.25` | ATR multiplier used to decide whether the candle block has enough momentum. Replaces `g_ATR_Multiplier`. |
-| `g_MinEMASeparationCandles` | Integer candles | `0` | `72` | `3` | Minimum closed candles since EMA cross or touch. |
+| `g_FastEMALength` | Integer candles | `25` | `300` | `25` | Must be less than `g_SlowEMALength`. |
+| `g_SlowEMALength` | Integer candles | `100` | `800` | `50` | Must be greater than `g_FastEMALength`. |
+| `g_ATR_Period` | Integer candles | `24` | `240` | `24` | ATR period used for momentum threshold and max stop-loss size gate; `240` H1 bars is roughly two trading weeks. |
+| `g_MomentumATRMultiplier` | Floating point | `2.0` | `7.0` | `0.5` | ATR multiplier used to decide whether the candle block has enough momentum. Replaces `g_ATR_Multiplier`. |
+| `g_MinEMASeparationCandles` | Integer candles | `0` | `24` | `3` | Minimum closed candles since EMA cross or touch. |
 | `g_ContiguousCandles` | Integer candles | `1` | `10` | `1` | Momentum block length used for square creation. |
 | `g_RelVolSignalCandles` | Integer candles | `1` | `10` | `1` | Number of closed candles accumulated for the relative-volume signal. Replaces `g_RelVolCandles`. |
 | `g_RelVolThreshold` | Floating point | `1.0` | `10.0` | `0.5` | Relative-volume threshold used for diamond/square creation. |
-| `g_RiskPercentOfBalance` | Floating point | `0.1` | `1.0` | `0.1` | Percentage of fixed starting balance risked per trade. |
-| `g_TakeProfitSLMultiple` | Floating point | `1.0` | `5.0` | `0.25` | Take-profit distance as a multiple of slow-EMA stop-loss distance. |
+| `g_RiskPercentOfBalance` | Floating point | `1.0` | `1.0` | `0` | Fixed at `1.0`; no longer optimized in the current preset. |
+| `g_TakeProfitSLMultiple` | Floating point | `1.0` | `3.0` | `0.5` | Take-profit distance as a multiple of slow-EMA stop-loss distance. |
 | `g_MaxStopLossATRMultiple` | Floating point | `1.0` | `10.0` | `0.5` | Maximum allowed slow-EMA stop distance in ATR multiples. |
 
 ## Draft Trade Gate
@@ -188,17 +188,17 @@ Use these inputs in the revised EA. Remove `g_StopLossATRMultiple`.
 
 | Input | Default | Optimized | Min | Step | Max | Notes |
 | --- | ---: | --- | ---: | ---: | ---: | --- |
-| `g_ATR_Period` | `14` | Yes | `10` | `5` | `500` | Used for momentum threshold and max stop-loss size gate. |
-| `g_MomentumATRMultiplier` | `5.0` | Yes | `1.0` | `0.25` | `10.0` | Rename from `g_ATR_Multiplier`. |
+| `g_ATR_Period` | `24` | Yes | `24` | `24` | `240` | Used for momentum threshold and max stop-loss size gate. |
+| `g_MomentumATRMultiplier` | `5.0` | Yes | `2.0` | `0.5` | `7.0` | Rename from `g_ATR_Multiplier`. |
 | `g_ContiguousCandles` | `2` | Yes | `1` | `1` | `10` | Existing momentum block input. |
-| `g_RelVolLength` | `20` | Yes | `5` | `5` | `90` | Prior-day same-slot lookback length. Keep this name unless user asks to rename. |
+| `g_RelVolLength` | `20` | Yes | `10` | `5` | `40` | Prior-day same-slot lookback length. Keep this name unless user asks to rename. |
 | `g_RelVolSignalCandles` | `1` | Yes | `1` | `1` | `10` | Rename from `g_RelVolCandles`. |
 | `g_RelVolThreshold` | `1.5` | Yes | `1.0` | `0.5` | `10.0` | Existing RelVol signal threshold. |
-| `g_FastEMALength` | `100` | Yes | `25` | `25` | `1975` | Must be less than slow EMA length. |
-| `g_SlowEMALength` | `400` | Yes | `50` | `25` | `2000` | Must be greater than fast EMA length. |
-| `g_MinEMASeparationCandles` | `0` | Yes | `0` | `3` | `72` | Minimum closed candles since EMA cross or touch. |
-| `g_RiskPercentOfBalance` | `1.0` | Yes | `0.1` | `0.1` | `1.0` | Fixed starting-balance risk percentage. |
-| `g_TakeProfitSLMultiple` | `2.0` | Yes | `1.0` | `0.25` | `5.0` | TP distance as a multiple of slow-EMA SL distance. |
+| `g_FastEMALength` | `100` | Yes | `25` | `25` | `300` | Must be less than slow EMA length. |
+| `g_SlowEMALength` | `400` | Yes | `100` | `50` | `800` | Must be greater than fast EMA length. |
+| `g_MinEMASeparationCandles` | `0` | Yes | `0` | `3` | `24` | Minimum closed candles since EMA cross or touch. |
+| `g_RiskPercentOfBalance` | `1.0` | No | `1.0` | `0` | `1.0` | Fixed starting-balance risk percentage. |
+| `g_TakeProfitSLMultiple` | `2.0` | Yes | `1.0` | `0.5` | `3.0` | TP distance as a multiple of slow-EMA SL distance. |
 | `g_MaxStopLossATRMultiple` | `3.0` | Yes | `1.0` | `0.5` | `10.0` | Skip trades when slow-EMA stop distance is too large. |
 | `g_HistoryBarsToScan` | `2000` | No | N/A | N/A | N/A | Operational/chart input. |
 | `g_MarkerSize` | `1` | No | N/A | N/A | N/A | Operational/chart input. |
@@ -539,14 +539,15 @@ Record confirmed decisions here.
 | 2026-07-31 | Created planning document before changing TDTS behavior. | Keep strategy design and implementation separated. |
 | 2026-07-31 | Remove `g_StopLossATRMultiple` from the new/revised EA. | Stop loss will be calculated from the slow EMA, so ATR no longer defines the stop-loss distance. |
 | 2026-07-31 | Require `slow EMA length > fast EMA length`. | Preserve the intended meaning of fast and slow trend filters and avoid ambiguous optimizer combinations. |
-| 2026-07-31 | Use EMA optimizer ranges: fast `25 -> 1975` step `25`; slow `50 -> 2000` step `25`. | Define broad long-horizon EMA search space while preserving fast/slow ordering. |
-| 2026-07-31 | Use `g_MinEMASeparationCandles` optimizer range `0 -> 72` step `3`. | Test whether a newly crossed EMA state or a longer sustained separation works better. |
+| 2026-07-31 | Original broad EMA optimizer ranges: fast `25 -> 1975` step `25`; slow `50 -> 2000` step `25`. | Superseded by the narrower `2026-08-06` preset change below. |
+| 2026-07-31 | Original `g_MinEMASeparationCandles` optimizer range `0 -> 72` step `3`. | Superseded by the narrower `2026-08-06` preset change below. |
 | 2026-07-31 | Use `g_ContiguousCandles` optimizer range `1 -> 10` step `1`. | Keep momentum block length searchable. |
 | 2026-07-31 | Use `g_RelVolThreshold` optimizer range `1.0 -> 10.0` step `0.5`. | Keep relative-volume confirmation strictness searchable. |
 | 2026-07-31 | Rename `g_RelVolCandles` to `g_RelVolSignalCandles` and use optimizer range `1 -> 10` step `1`. | Make the input name clearer: it controls the relative-volume signal candle window, not the historical daily lookback. |
-| 2026-07-31 | Use `g_RiskPercentOfBalance` optimizer range `0.1 -> 1.0` step `0.1`. | Test fixed starting-balance risk levels from `100` to `1000` per trade on a `100000` starting balance. |
-| 2026-07-31 | Rename `g_ATR_Multiplier` to `g_MomentumATRMultiplier` and use optimizer range `1.0 -> 10.0` step `0.25`. | Make clear that the multiplier controls momentum detection, not ATR generally. |
-| 2026-07-31 | Use `g_ATR_Period` optimizer range `10 -> 500` step `5`. | The revised EA is expected to run on H1/H2/H3/H4 and M30/M15, not primarily daily charts. |
+| 2026-07-31 | Original `g_RiskPercentOfBalance` optimizer range `0.1 -> 1.0` step `0.1`. | Superseded by the fixed-risk `2026-08-06` preset change below. |
+| 2026-07-31 | Rename `g_ATR_Multiplier` to `g_MomentumATRMultiplier` and original optimizer range `1.0 -> 10.0` step `0.25`. | Name change remains current; range was superseded by the narrower `2026-08-06` preset change below. |
+| 2026-07-31 | Original `g_ATR_Period` optimizer range `10 -> 500` step `5`. | Superseded by the narrower `2026-08-06` preset change below. |
+| 2026-08-06 | Narrow `ATRMomentumRelVolEMAFilter_WalkForward_Current.set` parameter space. | Current ranges: ATR `24 -> 240` step `24`; momentum ATR multiplier `2.0 -> 7.0` step `0.5`; RelVol length `10 -> 40` step `5`; fast EMA `25 -> 300` step `25`; slow EMA `100 -> 800` step `50`; minimum EMA separation `0 -> 24` step `3`; take-profit multiple `1.0 -> 3.0` step `0.5`; fixed `g_RiskPercentOfBalance=1.0` with optimization disabled. |
 | 2026-07-31 | Keep broad EMA ranges for the first run despite large state space. | Some parts of the range may prove uninformative, but this should be judged from first-run optimizer evidence before shrinking. |
 | 2026-07-31 | Treat the implementation handoff plan as code-ready for the first revised EA pass. | Remaining questions from the original draft have been resolved in this document; no code-level blocker remains before creating the new EA file. |
 | 2026-07-31 | Use the slow EMA value from the closed signal candle as the stop-loss anchor. | The revised EA evaluates closed candles and should avoid mixing the signal state with an in-progress EMA value. |

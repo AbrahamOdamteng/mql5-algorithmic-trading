@@ -1,9 +1,10 @@
 param(
   [string]$TerminalPath = 'C:\Program Files\MetaTrader 5\terminal64.exe',
   [string]$ExperimentId = 'mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m_optm1ohlc',
+  [string]$SourceOptimizerExperimentId = '',
   [datetime]$FirstOosStart = '2025-01-01',
   [datetime]$LastOosStart = '2025-06-01',
-  [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades', 'BackForwardScoreThenLowestDD', 'BackForwardScoreThenHighestProfit', 'BackForwardScoreThenHighestTrades', 'BackForwardScoreThenLowestTrades', 'BackForwardScoreThenHighestPF', 'BackForwardScoreThenHighestDD', 'BackForwardScoreFallbackHighestTrades')]
+  [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades', 'BackForwardScoreThenLowestDD', 'BackForwardScoreThenHighestProfit', 'BackForwardScoreThenHighestTrades', 'BackForwardScoreThenHighestTotalTrades', 'BackForwardScoreThenLowestTrades', 'BackForwardScoreThenHighestPF', 'BackForwardScoreThenHighestDD', 'BackForwardScoreFallbackHighestTrades')]
   [string]$ForwardSelectionMode = 'BackForwardScoreThenHighestTrades',
   [double]$MinBackScore = 90.0,
   [double]$MinForwardScore = 90.0,
@@ -21,6 +22,7 @@ param(
   [int]$MaxRuntimeMinutes = 20,
   [switch]$PrepareOnly,
   [switch]$RunExistingReports,
+  [switch]$StrictScoreGates,
   [switch]$ClearTesterCache
 )
 
@@ -33,6 +35,7 @@ if (-not (Test-Path -LiteralPath $runner)) { throw "Runner not found: $runner" }
 $runnerArgs = @{
   TerminalPath = $TerminalPath
   ExperimentId = $ExperimentId
+  SourceOptimizerExperimentId = $SourceOptimizerExperimentId
   TempSetFile = 'ATRMomentumRelVolEMAFilter_ForwardValidation_Generated.set'
   TempConfigPath = (Join-Path $PSScriptRoot 'mrv_ema_forward_validation_current.ini')
   FirstOosStart = $FirstOosStart
@@ -61,6 +64,7 @@ $runnerArgs = @{
 
 if ($PrepareOnly) { $runnerArgs.PrepareOnly = $true }
 if ($RunExistingReports) { $runnerArgs.RunExistingReports = $true }
+if ($StrictScoreGates) { $runnerArgs.StrictScoreGates = $true }
 if ($ClearTesterCache) { $runnerArgs.ClearTesterCache = $true }
 
 & $runner @runnerArgs

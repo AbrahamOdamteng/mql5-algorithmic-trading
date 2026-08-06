@@ -40,6 +40,31 @@ Each entry should include:
 
 ## Entries
 
+### 2026-08-06 - GBPUSD Slim MRV EMA Total-Trades W0001 Diagnostic
+
+- Goal: Test the narrowed MRV EMA parameter preset on a non-EURUSD, non-gold symbol and compare the new total-trades selector against the prior highest-validation-trades selector.
+- Change or experiment: Ran `GBPUSD` W0001 only under process `mrv_ema_fwd_gbpusd_2025_is24m_val24m_oos1m_step1m_slim_totaltrades01`, using `24` months IS/back, `24` months forward validation, `1` month OOS, `1` month step, `BackScore >= 90`, `ForwardScore >= 90`, and `ForwardSelectionMode=BackForwardScoreThenHighestTotalTrades`.
+- Test setup: Window W0001 had IS `2021.01.01 -> 2023.01.01`, VAL `2023.01.01 -> 2025.01.01`, and OOS `2025.01.01 -> 2025.02.01`.
+- Selection: selected `MRV_EMA_Pass14873` with `BackScore=98.44`, `ForwardScore=92.72`, validation profit `43,882.17`, validation DD `10.14%`, validation ratio `4.327`, `68` IS trades, `109` validation trades, and `177` total back-plus-forward trades.
+- Selected parameters: `ATR=144`, `MomentumATRMultiplier=4`, `ContiguousCandles=4`, `RelVolLength=35`, `RelVolSignalCandles=10`, `RelVolThreshold=4`, `FastEMALength=250`, `SlowEMALength=800`, `MinEMASeparationCandles=9`, `RiskPercentOfBalance=1`, `TakeProfitSLMultiple=1.5`, and `MaxStopLossATRMultiple=10`.
+- OOS outcome: OOS profit `-1,564.16`, return `-1.564%`, equity DD `4.13%`, ratio `-0.379`, `4` trades, profit factor `0.49`, and win rate `25%`.
+- Comparison: The prior GBPUSD W0001 `BackForwardScoreThenHighestTrades` run selected `MRV_EMA_Pass4009` and lost `-2,066.48` OOS; a fresh repeat of that same process selected no candidate. The total-trades selector found a different 90/90-qualified candidate and lost less, but still failed OOS.
+- Decision or next step: Treat this as another failed single-window OOS datapoint, not as evidence for promotion. The useful finding is process behavior: repeatability remains suspect, and total-trades selection may increase selected-candidate activity but did not solve GBPUSD W0001 OOS failure.
+
+### 2026-08-06 - MRV EMA Highest Total Trade Count Selection Mode
+
+- Goal: Test a stricter score-gated but higher-activity forward-selection rule after GBPUSD W0001 repeatability showed one run selected a candidate and a fresh optimizer repeat selected none.
+- Change or experiment: Added `BackForwardScoreThenHighestTotalTrades` to `Files/ATRMomentumRelVolEMAFilter/Run-MRV-EURUSD-ForwardPerturbationGenerator.ps1` and the forward-validation wrapper. The mode requires `BackScore >= MinBackScore` and `ForwardScore >= MinForwardScore`, then ranks by `SumTradeCount = ISTrades + ValidationTrades`. Tie-breakers are validation trades descending, IS trades descending, validation profit descending, validation DD ascending, forward score descending, back score descending, and pass ascending.
+- Output change: Forward candidates and selection summaries now include `SumTradeCount`; selection summaries also include `ISTrades` so the total-trades decision is auditable.
+- Decision or next step: Use this mode as a new diagnostic, not as a promotion rule, and compare repeated optimizer runs under separate experiment IDs to see whether it stabilizes selection versus `BackForwardScoreThenHighestTrades`.
+
+### 2026-08-06 - MRV EMA Optimizer Parameter-Space Reduction
+
+- Goal: Reduce the MRV EMA optimizer search space before further real-tick repeatability or grouped-perturbation diagnostics.
+- Change or experiment: Updated `Profiles/Tester/ATRMomentumRelVolEMAFilter_WalkForward_Current.set` with narrower ranges: `g_ATR_Period=24||24||24||240||Y`, `g_MomentumATRMultiplier=5.0||2.0||0.5||7.0||Y`, `g_RelVolLength=20||10||5||40||Y`, `g_FastEMALength=100||25||25||300||Y`, `g_SlowEMALength=400||100||50||800||Y`, `g_MinEMASeparationCandles=0||0||3||24||Y`, `g_RiskPercentOfBalance=1.0||1.0||0||1.0||N`, and `g_TakeProfitSLMultiple=2.0||1.0||0.5||3.0||Y`.
+- Outcome: Raw optimizer grid size was reduced from approximately `63,133,481,371,950,000` combinations to `225,155,700,000`, about `280,399x` smaller. Accounting for invalid EMA pairs where `slow <= fast`, effective space was reduced from approximately `31,966,319,682,000,000` to `193,884,075,000`, about `164,873x` smaller.
+- Decision or next step: Future MRV EMA diagnostics using this preset should be treated as a new process version relative to the older wide-range, risk-optimized diagnostics. Historical candidate metrics from earlier runs remain valid as diagnostics but are not directly comparable without rerunning under the narrowed fixed-risk preset.
+
 ### 2026-08-06 - MRV EMA EURUSD 1-Minute-OHLC Optimizer Speed Diagnostic
 
 - Goal: Test whether the MRV EMA forward-validation process can be accelerated by using MT5 `Model=1` (`1 minute OHLC`) for optimizer+forward runs while keeping fixed OOS tests on real ticks.

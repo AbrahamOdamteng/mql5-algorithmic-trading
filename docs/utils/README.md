@@ -251,13 +251,14 @@ powershell -ExecutionPolicy Bypass -File .\Files\ATRMomentumRelVolEMAFilter\Run-
 Supported score-gated `-ForwardSelectionMode` values include:
 
 - `BackForwardScoreThenHighestTrades`
+- `BackForwardScoreThenHighestTotalTrades`
 - `BackForwardScoreThenHighestProfit`
 - `BackForwardScoreThenLowestDD`
 - `BackForwardScoreThenHighestDD`
 - `BackForwardScoreThenLowestTrades`
 - `BackForwardScoreThenHighestPF`
 
-When using `BackForwardScoreThenHighestProfit`, "highest profit" means highest forward/validation profit. Back/IS profit is not part of that ranking except through `BackScore`.
+When using `BackForwardScoreThenHighestProfit`, "highest profit" means highest forward/validation profit. Back/IS profit is not part of that ranking except through `BackScore`. When using `BackForwardScoreThenHighestTotalTrades`, candidates must pass the back and forward score gates, then are ranked by `ISTrades + ValidationTrades` with validation trades, IS trades, validation profit, lower validation DD, forward score, back score, and pass number as tie-breakers.
 
 The latest four-window EURUSD diagnostic lead is `BackScore >= 90`, `ForwardScore >= 90`, then highest validation trades, with net OOS `+6,134.56`, `13` OOS trades, and worst OOS DD `1.81%`. Treat this as a tiny diagnostic, not a promoted process.
 

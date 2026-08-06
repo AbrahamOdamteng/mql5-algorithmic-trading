@@ -2,17 +2,17 @@
 ; this file contains input parameters for testing/optimizing ATRMomentumRelVolEMAFilterEA expert advisor
 ; to use it in the strategy tester, click Load in the context menu of the Inputs tab
 ;
-g_ATR_Period=14||10||5||500||Y
-g_MomentumATRMultiplier=5.0||1.0||0.25||10.0||Y
+g_ATR_Period=24||24||24||240||Y
+g_MomentumATRMultiplier=5.0||2.0||0.5||7.0||Y
 g_ContiguousCandles=2||1||1||10||Y
-g_RelVolLength=20||5||5||90||Y
+g_RelVolLength=20||10||5||40||Y
 g_RelVolSignalCandles=1||1||1||10||Y
 g_RelVolThreshold=1.5||1.0||0.5||10.0||Y
-g_FastEMALength=100||25||25||1975||Y
-g_SlowEMALength=400||50||25||2000||Y
-g_MinEMASeparationCandles=0||0||3||72||Y
-g_RiskPercentOfBalance=1.0||0.1||0.1||1.0||Y
-g_TakeProfitSLMultiple=2.0||1.0||0.25||5.0||Y
+g_FastEMALength=100||25||25||300||Y
+g_SlowEMALength=400||100||50||800||Y
+g_MinEMASeparationCandles=0||0||3||24||Y
+g_RiskPercentOfBalance=1.0||1.0||0||1.0||N
+g_TakeProfitSLMultiple=2.0||1.0||0.5||3.0||Y
 g_MaxStopLossATRMultiple=3.0||1.0||0.5||10.0||Y
 g_HistoryBarsToScan=2000||2000||1||2000||N
 g_MarkerSize=1||1||1||5||N
