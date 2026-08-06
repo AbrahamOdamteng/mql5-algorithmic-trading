@@ -26,7 +26,7 @@ param(
   [double]$CatastrophicDDMultiple = 1.50,
   [int]$MaxGroupsToPerturb = 10,
   [double]$StartingDeposit = 100000.0,
-  [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades', 'BackForwardScoreThenLowestDD', 'BackForwardScoreThenHighestProfit', 'BackForwardScoreThenHighestTrades', 'BackForwardScoreThenLowestTrades', 'BackForwardScoreThenHighestPF', 'BackForwardScoreThenHighestDD')]
+  [ValidateSet('ValidationScore', 'PositiveBestRatio', 'ValidationProfit', 'LowestValidationDD', 'HighestValidationPF', 'LowestValidationTrades', 'BackForwardScoreThenLowestDD', 'BackForwardScoreThenHighestProfit', 'BackForwardScoreThenHighestTrades', 'BackForwardScoreThenLowestTrades', 'BackForwardScoreThenHighestPF', 'BackForwardScoreThenHighestDD', 'BackForwardScoreFallbackHighestTrades')]
   [string]$ForwardSelectionMode = 'PositiveBestRatio',
   [double]$MinBackScore = 80.0,
   [double]$MinForwardScore = 80.0,
@@ -368,7 +368,8 @@ function New-ForwardOptimizerConfig {
     "FromDate=$($Window.OptimizerStart)",
     "ToDate=$($Window.OptimizerEnd)",
     '',
-    'Model=4',
+    '; Use 1 minute OHLC for optimizer speed; fixed OOS tests still use Model=4 real ticks.',
+    'Model=1',
     'Optimization=2',
     'Visual=0',
     '',
@@ -405,6 +406,19 @@ function Invoke-ForwardOptimizerRun {
   Start-Sleep -Seconds 2
   if (-not (Test-Path -LiteralPath $ExpectedOptimizerPath)) { throw "Optimizer finished but optimizer report was not found: $ExpectedOptimizerPath" }
   if (-not (Test-Path -LiteralPath $ExpectedForwardPath)) { throw "Optimizer finished but forward report was not found: $ExpectedForwardPath" }
+
+  $finishedTime = Get-Date
+  $durationSeconds = ($finishedTime - $startTime).TotalSeconds
+  $durationMinutes = $durationSeconds / 60.0
+  Write-Host ("Finished optimizer+forward {0}: Completed in {1:N2} minutes" -f $Window.WindowId, $durationMinutes)
+
+  return [pscustomobject]@{
+    StartedAt = $startTime.ToString('s')
+    FinishedAt = $finishedTime.ToString('s')
+    DurationSeconds = [Math]::Round($durationSeconds, 2)
+    DurationMinutes = [Math]::Round($durationMinutes, 2)
+    Note = 'Optimizer and forward reports found.'
+  }
 }
 
 function Get-ReportRatio {
@@ -543,6 +557,7 @@ function Select-ForwardCandidate {
 
   if ($Candidates.Count -eq 0) { return @() }
 
+  $scoreGateThreshold = ''
   $ranked = switch ($ForwardSelectionMode) {
     'PositiveBestRatio' {
       @($Candidates | Sort-Object @{ Expression = 'ValidationRatio'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ValidationTrades'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
@@ -594,6 +609,17 @@ function Select-ForwardCandidate {
       @($qualified | Sort-Object @{ Expression = 'ValidationDDPct'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationProfitFactor'; Descending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
     }
+    'BackForwardScoreFallbackHighestTrades' {
+      foreach ($threshold in @(90.0, 85.0, 80.0, 75.0)) {
+        $qualified = @($Candidates | Where-Object { [double]$_.BackScore -ge $threshold -and [double]$_.ForwardScore -ge $threshold })
+        if ($qualified.Count -gt 0) {
+          $scoreGateThreshold = $threshold
+          @($qualified | Sort-Object @{ Expression = 'ValidationTrades'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'ForwardScore'; Descending = $true }, @{ Expression = 'BackScore'; Descending = $true }, @{ Expression = 'Pass'; Ascending = $true })
+          break
+        }
+      }
+      break
+    }
     default {
       @($Candidates | Sort-Object @{ Expression = 'ValidationScore'; Descending = $true }, @{ Expression = 'ValidationProfit'; Descending = $true }, @{ Expression = 'ValidationDDPct'; Ascending = $true }, @{ Expression = 'Pass'; Ascending = $true })
       break
@@ -605,6 +631,7 @@ function Select-ForwardCandidate {
 
   $selected[0] | Add-Member -NotePropertyName GroupId -NotePropertyValue 'FORWARD' -Force
   $selected[0] | Add-Member -NotePropertyName GroupSize -NotePropertyValue 1 -Force
+  $selected[0] | Add-Member -NotePropertyName ScoreGateThreshold -NotePropertyValue $scoreGateThreshold -Force
   $selected[0] | Add-Member -NotePropertyName PerturbationTests -NotePropertyValue '' -Force
   $selected[0] | Add-Member -NotePropertyName ProfitablePerturbations -NotePropertyValue '' -Force
   $selected[0] | Add-Member -NotePropertyName PerturbationProfitRate -NotePropertyValue '' -Force
@@ -772,6 +799,29 @@ function Append-Progress {
   } else {
     $row | Export-Csv -LiteralPath $ProgressPath -NoTypeInformation -Encoding ASCII
   }
+}
+
+function Append-OptimizerProgress {
+  param([object]$Row, [string]$ProgressPath)
+
+  $columns = @(
+    'Timestamp',
+    'WindowIndex',
+    'WindowId',
+    'Status',
+    'StartedAt',
+    'FinishedAt',
+    'DurationSeconds',
+    'DurationMinutes',
+    'OptimizerXml',
+    'ForwardXml',
+    'Note'
+  )
+
+  $rows = @()
+  if (Test-Path -LiteralPath $ProgressPath) { $rows += @(Import-Csv -LiteralPath $ProgressPath) }
+  $rows += $Row
+  $rows | Select-Object $columns | Export-Csv -LiteralPath $ProgressPath -NoTypeInformation -Encoding ASCII
 }
 
 function Invoke-TestManifest {
@@ -965,6 +1015,7 @@ function Export-Selection {
     Pass = if ($null -ne $Selected) { $Selected.Pass } else { '' }
     BackScore = if ($null -ne $Selected) { $Selected.BackScore } else { '' }
     ForwardScore = if ($null -ne $Selected) { $Selected.ForwardScore } else { '' }
+    ScoreGateThreshold = if ($null -ne $Selected -and $null -ne $Selected.PSObject.Properties['ScoreGateThreshold']) { $Selected.ScoreGateThreshold } else { '' }
     PerturbationTests = if ($null -ne $Selected) { $Selected.PerturbationTests } else { '' }
     ProfitablePerturbations = if ($null -ne $Selected) { $Selected.ProfitablePerturbations } else { '' }
     PerturbationProfitRate = if ($null -ne $Selected) { $Selected.PerturbationProfitRate } else { '' }
@@ -1069,15 +1120,20 @@ foreach ($window in ($windows | Sort-Object { [int]$_.WindowIndex })) {
   $forwardXml = Convert-ReportPathToFullPath -ReportRoot $reportRoot -ExpectedReport $forwardReport
 
   if (-not (Test-Path -LiteralPath $optimizerXml) -or -not (Test-Path -LiteralPath $forwardXml)) {
-    Invoke-ForwardOptimizerRun -Window $window -ConfigPath $TempConfigPath -Report $optimizerReport -ExpectedOptimizerPath $optimizerXml -ExpectedForwardPath $forwardXml -TemplateSetFileName $TemplateSetFile
-    [pscustomobject]@{
-      Timestamp = (Get-Date).ToString('s')
+    $optimizerRun = Invoke-ForwardOptimizerRun -Window $window -ConfigPath $TempConfigPath -Report $optimizerReport -ExpectedOptimizerPath $optimizerXml -ExpectedForwardPath $forwardXml -TemplateSetFileName $TemplateSetFile
+    Append-OptimizerProgress -ProgressPath $optimizerProgressPath -Row ([pscustomobject]@{
+      Timestamp = $optimizerRun.FinishedAt
       WindowIndex = $window.WindowIndex
       WindowId = $window.WindowId
       Status = 'Completed'
+      StartedAt = $optimizerRun.StartedAt
+      FinishedAt = $optimizerRun.FinishedAt
+      DurationSeconds = $optimizerRun.DurationSeconds
+      DurationMinutes = $optimizerRun.DurationMinutes
       OptimizerXml = $optimizerXml
       ForwardXml = $forwardXml
-    } | Export-Csv -LiteralPath $optimizerProgressPath -NoTypeInformation -Append -Encoding ASCII
+      Note = $optimizerRun.Note
+    })
   } else {
     Write-Host "Optimizer and forward reports already exist: $optimizerXml"
   }

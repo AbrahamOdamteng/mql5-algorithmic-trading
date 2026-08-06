@@ -40,6 +40,58 @@ Each entry should include:
 
 ## Entries
 
+### 2026-08-06 - MRV EMA EURUSD 1-Minute-OHLC Optimizer Speed Diagnostic
+
+- Goal: Test whether the MRV EMA forward-validation process can be accelerated by using MT5 `Model=1` (`1 minute OHLC`) for optimizer+forward runs while keeping fixed OOS tests on real ticks.
+- Change or experiment: Updated the forward-validation wrapper to use a separate experiment ID, `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m_optm1ohlc`, so the original EURUSD real-tick optimization reports under `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m` were not overwritten. The generated optimizer config uses `Model=1`; fixed OOS tests still use `Model=4`.
+- Test setup: Symbol `EURUSD`; timeframe `H1`; `24` months IS/back, `24` months forward validation via `ForwardMode=1`, `1` month OOS, `1` month step; OOS starts `2025.01.01 -> 2026.05.01`; selection rule `BackForwardScoreThenHighestTrades` with `BackScore >= 90` and `ForwardScore >= 90`.
+- Runtime outcome: All `17` optimizer+forward windows completed. Average optimizer+forward runtime was `28.98` minutes per window, with total optimizer+forward runtime about `8.21` hours. This is much faster than the XAUUSD real-tick diagnostic and fast enough for broad diagnostics.
+- Aggregate OOS outcome: selected windows `13 / 17`; no-selection windows `4`; profitable selected OOS windows `2 / 13`; profitable total windows `2 / 17`; zero-trade selected windows `2`; net OOS `-4,482.18`; OOS trades `62`; worst OOS equity DD `3.99%`.
+- No-selection windows: W0004 `2025.04.01 -> 2025.05.01`, W0005 `2025.05.01 -> 2025.06.01`, W0006 `2025.06.01 -> 2025.07.01`, and W0008 `2025.08.01 -> 2025.09.01`.
+- Window table:
+
+| Window | OOS period | Status | Pass | OOS profit | OOS DD | OOS trades |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| W0001 | `2025.01.01 -> 2025.02.01` | Selected | `5157` | `-950.69` | `1.97%` | `7` |
+| W0002 | `2025.02.01 -> 2025.03.01` | Selected | `3059` | `-979.25` | `1.44%` | `1` |
+| W0003 | `2025.03.01 -> 2025.04.01` | Selected | `6005` | `0.00` | `0.00%` | `0` |
+| W0004 | `2025.04.01 -> 2025.05.01` | No selection | - | - | - | - |
+| W0005 | `2025.05.01 -> 2025.06.01` | No selection | - | - | - | - |
+| W0006 | `2025.06.01 -> 2025.07.01` | No selection | - | - | - | - |
+| W0007 | `2025.07.01 -> 2025.08.01` | Selected | `4910` | `-883.37` | `0.88%` | `13` |
+| W0008 | `2025.08.01 -> 2025.09.01` | No selection | - | - | - | - |
+| W0009 | `2025.09.01 -> 2025.10.01` | Selected | `2318` | `-325.69` | `0.85%` | `3` |
+| W0010 | `2025.10.01 -> 2025.11.01` | Selected | `3725` | `-3,759.93` | `3.99%` | `10` |
+| W0011 | `2025.11.01 -> 2025.12.01` | Selected | `5526` | `-451.01` | `2.28%` | `5` |
+| W0012 | `2025.12.01 -> 2026.01.01` | Selected | `8918` | `0.00` | `0.00%` | `0` |
+| W0013 | `2026.01.01 -> 2026.02.01` | Selected | `5538` | `-1,453.44` | `3.43%` | `9` |
+| W0014 | `2026.02.01 -> 2026.03.01` | Selected | `6073` | `-79.52` | `0.76%` | `2` |
+| W0015 | `2026.03.01 -> 2026.04.01` | Selected | `2762` | `+6,507.84` | `1.90%` | `6` |
+| W0016 | `2026.04.01 -> 2026.05.01` | Selected | `4409` | `+27.34` | `0.16%` | `2` |
+| W0017 | `2026.05.01 -> 2026.06.01` | Selected | `6153` | `-2,134.46` | `2.48%` | `4` |
+
+- Key comparison against the clean real-tick six-window result: W0001 real-tick selected `MRV_EMA_Pass3285` and produced OOS `+5,218.80`, while the OHLC optimizer selected `MRV_EMA_Pass5157` and produced OOS `-950.69`. W0002 real-tick selected `Pass9045` and produced `-402.31`, while OHLC selected `Pass3059` and produced `-979.25`. W0003 real-tick selected `Pass2532` and produced `+1,318.07`, while OHLC selected `Pass6005` and produced `0.00`. W0004 real-tick selected `Pass3569` and produced `0.00`, while OHLC had no selection.
+- Interpretation: `Model=1` is not a safe drop-in acceleration method for this process. It changes the optimizer/forward candidate landscape enough to select different manifolds, and those selections did not transfer well to real-tick OOS. Treat this as a failed speed diagnostic, not as evidence against the original real-tick six-window result.
+- Additional risk surfaced: if rerunning the same real-tick optimizer window can also select materially different candidates, then single-run generator results are stochastic samples rather than stable process measurements. This needs an explicit repeatability diagnostic before promoting any generator result.
+- Decision or next step: Do not use the OHLC optimizer result for promotion. Next useful diagnostic is to rerun one or more exact same real-tick windows under separate experiment IDs, compare selected candidates and OOS results, and decide whether the process needs repeated optimizer runs, candidate-pool unioning, parameter-region clustering, or grouped perturbation before OOS selection.
+
+### 2026-08-05 - MRV EMA XAUUSD Forward-Validation Partial Diagnostic
+
+- Goal: Test whether the current lead EURUSD MRV EMA forward-validation process transfers usefully to `XAUUSD` as a behaviorally different symbol for future multi-symbol portfolio complementarity.
+- Change or experiment: Ran the existing forward-perturbation runner in non-perturbation mode by using `-SkipPerturbation`, with symbol overridden to `XAUUSD` and a separate experiment ID.
+- Test setup: Process ID `mrv_ema_fwd_xauusd_2025_is24m_val24m_oos1m_step1m`; symbol `XAUUSD`; timeframe `H1`; MT5 optimizer `ForwardMode=1`; `24` months IS/back, `24` months forward validation, `1` month OOS, and `1` month step. Selection rule was `BackForwardScoreThenHighestTrades`, requiring `BackScore >= 90` and `ForwardScore >= 90`, then selecting the highest validation trade count. The run was limited to `3` windows because each XAUUSD optimizer+forward window is slow.
+- Command shape: `Run-MRV-EURUSD-ForwardPerturbationGenerator.ps1 -Symbol XAUUSD -ExperimentId mrv_ema_fwd_xauusd_2025_is24m_val24m_oos1m_step1m -ISMonths 24 -ValidationMonths 24 -OosMonths 1 -StepMonths 1 -ForwardSelectionMode BackForwardScoreThenHighestTrades -MinBackScore 90 -MinForwardScore 90 -SkipPerturbation -MaxWindows 3`.
+- W0001 setup: IS `2021.01.01 -> 2023.01.01`; VAL `2023.01.01 -> 2025.01.01`; OOS `2025.01.01 -> 2025.02.01`.
+- W0001 runtime: optimizer+forward completed in `684.83` minutes, about `11.4` hours. The final OOS fixed test completed in about `62` seconds.
+- W0001 selection: selected `MRV_EMA_Pass8410` with `BackScore=99.94`, `ForwardScore=92.81`, validation profit `5,592.68`, validation DD `2.28%`, validation ratio `2.452`, and `116` validation trades. Parameters included `ATR=460`, `MomentumATRMultiplier=4.25`, `ContiguousCandles=10`, `RelVolLength=5`, `RelVolSignalCandles=3`, `RelVolThreshold=4`, `FastEMALength=675`, `SlowEMALength=725`, `MinEMASeparationCandles=60`, `RiskPercentOfBalance=0.2`, `TakeProfitSLMultiple=1`, and `MaxStopLossATRMultiple=10`.
+- W0001 OOS outcome: `0.00` profit, `0.00%` return, `0.00%` equity DD, `0` trades, profit factor `0`, and win rate `0%`. This is a zero-trade selected month, not a profitable or losing month.
+- W0002 setup: IS `2021.02.01 -> 2023.02.01`; VAL `2023.02.01 -> 2025.02.01`; OOS `2025.02.01 -> 2025.03.01`.
+- W0002 runtime: optimizer+forward completed in `603.69` minutes, about `10.1` hours.
+- W0002 outcome: No forward candidate passed selection under the same `90/90` highest-validation-trades rule, so OOS was skipped.
+- Partial aggregate through W0002: selected windows `1 / 2`; profitable selected windows `0`; losing selected windows `0`; zero-trade selected windows `1`; no-selection windows `1`; net selected OOS profit `0.00`; selected OOS trades `0`; optimizer+forward runtime about `21.5` hours.
+- Interpretation: The first two XAUUSD windows are weak under the strict EURUSD-leading score-gated process. W0001 had strong validation but no OOS trades, while W0002 produced no selection. Given the large optimizer cost, this process is not yet showing useful XAUUSD complementarity.
+- Decision or next step: If W0003 is already running, let it finish only if the full planned three-window diagnostic is still desired. Otherwise, stopping after W0002 is defensible. Before extending XAUUSD, consider reducing runtime by narrowing optimizer ranges, using a faster tester model if acceptable, shortening IS/VAL, or separating signal-parameter selection from risk/margin optimization.
+
 ### 2026-08-04 - MRV EMA Forward-Validation Score-Gated Six-Window Extension
 
 - Goal: Extend the completed EURUSD EMA forward-validation diagnostic from four monthly OOS windows to six, while preserving the same non-perturbation `24m IS / 24m VAL / 1m OOS / 1m step` process.
@@ -62,7 +114,8 @@ Each entry should include:
 | W0006 | `2025.06.01 -> 2025.07.01` | Selected | `2975` | `99.48` | `98.55` | `93` | `+1,518.76` | `1.25%` | `3` |
 
 - Interpretation: The six-window extension improved the score-gated highest-trades diagnostic from net `+6,134.56` over four windows to net `+7,653.32` over six calendar deployment starts. The abstention in W0005 is acceptable in the intended multi-symbol framing, but it shows the `90/90` score gate can be strict. Results are still tiny-sample and EURUSD-only; do not promote without multi-symbol testing, fixed-risk review because `g_RiskPercentOfBalance` remains optimized, and more deployment windows.
-- Decision or next step: Treat `90/90` highest validation trades as the current lead MRV EMA forward-selection diagnostic. Next useful work is to test the same process on additional symbols, or to proceed to grouped validation-survivor perturbation after trade-frequency handling and fixed-risk assumptions are reviewed.
+- Risk and margin interpretation: `g_RiskPercentOfBalance` is intentionally optimizer-enabled in this diagnostic because some manifolds can take back-to-back trades and because planned deployment is multi-symbol. A single-symbol test does not model simultaneous positions across symbols competing for shared margin. FTMO-style `100x` leverage and OANDA-style `30x` leverage imply different feasible portfolio risk, so risk percent should be treated as a margin/capacity-sizing component until a portfolio-level replay models leverage, used margin, free margin, overlapping positions, and symbol contract specifications.
+- Decision or next step: Treat `90/90` highest validation trades as the current lead MRV EMA forward-selection diagnostic. Next useful work is to test the same strict process on `XAUUSD`, then compare EURUSD/XAUUSD portfolio complementarity before proceeding to grouped validation-survivor perturbation or fixed-risk portfolio replay.
 
 ### 2026-07-31 - MRV EMA-Filtered Variant Three-Window 2025 Diagnostic
 

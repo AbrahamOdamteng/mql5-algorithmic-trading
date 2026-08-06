@@ -183,6 +183,8 @@ Additional tested modes: `BackScore >= 80`, `ForwardScore >= 80`, then lowest va
 
 Current interpretation: on this tiny EURUSD-only diagnostic, `90/90` highest validation trades is the current lead among tested score-gated selection modes. Do not promote it yet; the result needs multi-symbol testing, fixed-risk review because `g_RiskPercentOfBalance` remains optimized, and broader rolling windows.
 
+Risk-percent optimization note: `g_RiskPercentOfBalance` is intentionally optimizer-enabled in the MRV EMA diagnostics. The reason is not just to maximize profit. Some manifolds can fire back-to-back trades, and in a multi-symbol deployment several symbols may initiate trades in the same hour. A single-symbol MT5 tester gives that symbol access to the full account margin, but a real portfolio shares finite margin across all symbols. FTMO-style accounts may have about `100x` leverage, while OANDA personal accounts may have about `30x`, so portfolio margin capacity can be materially tighter than any one-symbol test implies. Treat selected risk percent as a margin/capacity-sizing part of the candidate, and validate promising multi-symbol portfolios later with explicit leverage, margin, exposure, and free-margin rules.
+
 Follow-up W0005-W0006 overnight extension using the same `90/90` highest-validation-trades rule:
 
 | Window | OOS period | Status | Pass | Back score | Forward score | Validation trades | OOS profit | OOS DD | OOS trades |
@@ -195,6 +197,18 @@ Follow-up W0005-W0006 overnight extension using the same `90/90` highest-validat
 | W0006 | `2025.06.01 -> 2025.07.01` | Selected | `2975` | `99.48` | `98.55` | `93` | `+1,518.76` | `1.25%` | `3` |
 
 Six-window aggregate for this rule: net OOS `+7,653.32`, selected windows `5 / 6`, `3` profitable selected windows, `1` losing selected window, `1` zero-trade selected window, `1` no-selection window, `16` OOS trades, and worst OOS DD `1.81%`. W0005 abstained because `207` candidates passed normal IS/VAL gates, but `0` passed both `BackScore >= 90` and `ForwardScore >= 90`.
+
+Speed diagnostic using `1 minute OHLC` optimizer model:
+
+- Process ID: `mrv_ema_fwd_eurusd_2025_is24m_val24m_oos1m_step1m_optm1ohlc`.
+- Optimizer+forward used MT5 `Model=1`; fixed OOS tests still used real ticks (`Model=4`).
+- Reports were written to the separate `_optm1ohlc` folder, so the original real-tick EURUSD forward-validation reports were not overwritten.
+- Completed `17` windows from OOS starts `2025.01.01 -> 2026.05.01`.
+- Runtime averaged `28.98` minutes per optimizer+forward window.
+- Aggregate OOS: selected windows `13 / 17`, no-selection windows `4`, profitable selected windows `2 / 13`, zero-trade selected windows `2`, net OOS `-4,482.18`, `62` trades, and worst OOS DD `3.99%`.
+- The selected candidates differed materially from the earlier real-tick process. W0001 selected `MRV_EMA_Pass5157` and produced OOS `-950.69`, while the clean real-tick run selected `MRV_EMA_Pass3285` and produced OOS `+5,218.80`.
+- Interpretation: `Model=1` is fast but is not a safe drop-in replacement for real-tick optimization in this process. It changes the candidate landscape and selected manifolds. Treat the result as a failed speed diagnostic.
+- Follow-up risk: even with real ticks, MT5 genetic optimizer repeatability still needs testing. If identical real-tick reruns select different candidates with materially different OOS, generator results should be judged as a distribution across optimizer runs, not from one run.
 
 After forward-validation selection and trade-frequency handling are reviewed, the planned next process is grouped validation-survivor perturbation before OOS selection:
 
